@@ -33,6 +33,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = profile?.role === 'admin';
 
   const fetchUserProfile = useCallback(async (userId: string) => {
+    const createUserProfile = async (userId: string) => {
+      try {
+        
+        // Get user info from auth
+        const { data: authUser } = await supabase.auth.getUser();
+        if (!authUser.user) return;
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: userId,
+              email: authUser.user.email || '',
+              name: authUser.user.user_metadata?.name || '',
+              role: 'user',
+              created_at: new Date().toISOString(),
+            }
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating profile:', error);
+          return;
+        }
+
+        if (data) {
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error('Unexpected error creating profile:', error);
+      }
+    };
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -40,8 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
+      if (error) {
+        // PGRST116 = table/row not found, which might be expected for new users
+        if (error.code === 'PGRST116') {
+          console.warn('Profile not found, user might be newly registered:', userId);
+          // Try to create profile for this user
+          await createUserProfile(userId);
+        } else {
+          console.error('Error fetching profile:', error);
+        }
         return;
       }
 
@@ -49,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Unexpected error fetching profile:', error);
     }
   }, [supabase]);
 

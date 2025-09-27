@@ -1,10 +1,15 @@
 import type { NextConfig } from "next";
 
+// Use basePath only in production (GitHub Pages)
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
-  basePath: '/portal-pnd',
-  assetPrefix: '/portal-pnd/',
+  ...(isProd && {
+    basePath: '/portal-pnd',
+    assetPrefix: '/portal-pnd/',
+  }),
   images: {
     unoptimized: true
   },
