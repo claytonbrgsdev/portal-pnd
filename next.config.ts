@@ -7,7 +7,13 @@ const nextConfig: NextConfig = {
   assetPrefix: '/portal-pnd/',
   images: {
     unoptimized: true
-  }
+  },
+  // Silence the workspace root warning
+  outputFileTracingRoot: undefined,
+  // Configure for static export
+  experimental: {
+    esmExternals: true,
+  },
 };
 
 export default nextConfig;

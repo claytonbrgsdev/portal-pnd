@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -12,23 +13,47 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const { signIn, signUp } = useAuth();
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically handle login logic
-    console.log('Login attempt:', loginForm);
-    // For demo purposes, just close the modal
-    onClose();
+    setLoading(true);
+    setError(null);
+
+    const { error } = await signIn(loginForm.email, loginForm.password);
+
+    if (error) {
+      setError(error.message || 'Erro ao fazer login');
+    } else {
+      onClose();
+      setLoginForm({ email: '', password: '' });
+    }
+
+    setLoading(false);
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically handle registration logic
-    console.log('Registration attempt:', registerForm);
-    // For demo purposes, just close the modal
-    onClose();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error } = await signUp(registerForm.email, registerForm.password, registerForm.name);
+
+    if (error) {
+      setError(error.message || 'Erro ao criar conta');
+    } else {
+      setSuccess('Conta criada com sucesso! Verifique seu email para confirmar.');
+      setRegisterForm({ name: '', email: '', password: '' });
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -80,10 +105,22 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
 
         {/* Content */}
         <div className="p-6">
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700">{success}</p>
+            </div>
+          )}
+
           {activeTab === 'login' ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <p className="text-sm text-gray-600 mb-4">
-                Entre ou cadastre-se para acessar todos os recursos do Portal PND
+                Entre para acessar todos os recursos do Portal PND
               </p>
 
               <div>
@@ -98,6 +135,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="seu@email.com"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -113,20 +151,22 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Sua senha"
                   required
+                  disabled={loading}
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors"
+                disabled={loading}
+                className="w-full bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Entrar
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
           ) : (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <p className="text-sm text-gray-600 mb-4">
-                Entre ou cadastre-se para acessar todos os recursos do Portal PND
+                Cadastre-se para acessar todos os recursos do Portal PND
               </p>
 
               <div>
@@ -141,6 +181,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Seu nome completo"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -156,12 +197,13 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="seu@email.com"
                   required
+                  disabled={loading}
                 />
               </div>
 
               <div>
                 <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Senha
+                  Senha (mínimo 6 caracteres)
                 </label>
                 <input
                   type="password"
@@ -170,15 +212,18 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                   onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Crie uma senha"
+                  minLength={6}
                   required
+                  disabled={loading}
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors"
+                disabled={loading}
+                className="w-full bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cadastrar
+                {loading ? 'Criando conta...' : 'Cadastrar'}
               </button>
             </form>
           )}
