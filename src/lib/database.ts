@@ -9,7 +9,7 @@
  */
 
 export const DATABASE_CONFIG = {
-  url: process.env.DATABASE_URL || 'postgresql://postgres.rjgzvsuhjxpppvjzzrpq:password@aws-1-sa-east-1.pooler.supabase.com:6543/postgres',
+  url: 'postgresql://postgres.rjgzvsuhjxpppvjzzrpq:password@aws-1-sa-east-1.pooler.supabase.com:6543/postgres',
   pool: {
     min: 2,
     max: 10,
