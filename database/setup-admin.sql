@@ -30,24 +30,25 @@ LEFT JOIN profiles p ON au.id = p.id
 WHERE p.id IS NULL
 ON CONFLICT (id) DO NOTHING;
 
--- 3. TORNAR O USUÁRIO admin@admin.com COMO ADMINISTRADOR
+-- 3. TORNAR O USUÁRIO claytonborgesdev@gmail.com COMO ADMINISTRADOR
 -- Primeiro, garantir que o perfil existe para este usuário específico
 INSERT INTO profiles (id, email, name, role, created_at, updated_at)
-VALUES (
-    '0653420c-1517-4ddc-8ae2-5eade4cc3ec6',
-    'admin@admin.com',
-    'Administrador',
+SELECT 
+    au.id,
+    au.email,
+    COALESCE(au.raw_user_meta_data->>'name', 'Clayton Borges'),
     'admin',
-    NOW(),
+    au.created_at,
     NOW()
-)
+FROM auth.users au
+WHERE au.email = 'claytonborgesdev@gmail.com'
 ON CONFLICT (id) DO UPDATE SET
     role = 'admin',
-    name = 'Administrador',
+    name = COALESCE(EXCLUDED.name, 'Clayton Borges'),
     updated_at = NOW();
 
 -- Confirmar que o usuário existe na tabela auth.users
-SELECT 'Verificando usuário admin@admin.com:' as info;
+SELECT 'Verificando usuário claytonborgesdev@gmail.com:' as info;
 SELECT 
     id,
     email,
@@ -55,7 +56,7 @@ SELECT
     email_confirmed_at,
     CASE WHEN email_confirmed_at IS NOT NULL THEN '✅ Email confirmado' ELSE '❌ Email não confirmado' END as status_email
 FROM auth.users 
-WHERE email = 'admin@admin.com' OR id = '0653420c-1517-4ddc-8ae2-5eade4cc3ec6';
+WHERE email = 'claytonborgesdev@gmail.com';
 
 -- 4. Verificar o resultado
 SELECT 'Resultado final:' as info;
@@ -79,7 +80,7 @@ FROM pg_policies
 WHERE tablename = 'profiles';
 
 -- 6. Verificação específica do usuário admin
-SELECT '👑 Status do Administrador:' as info;
+SELECT '👑 Status do Clayton Borges (Admin):' as info;
 SELECT 
     au.id,
     au.email,
@@ -91,8 +92,8 @@ SELECT
         ELSE '❌ NÃO É ADMIN'
     END as status_final
 FROM auth.users au
-JOIN profiles p ON au.id = p.id
-WHERE au.email = 'admin@admin.com';
+LEFT JOIN profiles p ON au.id = p.id
+WHERE au.email = 'claytonborgesdev@gmail.com';
 
 -- ALTERNATIVA: Para tornar outros usuários admin no futuro,
 -- descomente e ajuste o email abaixo:
