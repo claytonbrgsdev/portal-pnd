@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AuthModal from './AuthModal';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
 
   const navItems = [
     { name: 'Início', href: '/' },
@@ -15,6 +18,20 @@ export default function Navbar() {
     { name: 'Dúvidas', href: '/duvidas' },
     { name: 'Blog', href: '/blog' },
   ];
+
+  const openLoginModal = () => {
+    setAuthModalTab('login');
+    setIsAuthModalOpen(true);
+  };
+
+  const openRegisterModal = () => {
+    setAuthModalTab('register');
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
@@ -61,18 +78,18 @@ export default function Navbar() {
             </div>
 
             {/* Auth Buttons */}
-            <Link
-              href="/entrar"
+            <button
+              onClick={openLoginModal}
               className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
               Entrar
-            </Link>
-            <Link
-              href="/cadastrar"
+            </button>
+            <button
+              onClick={openRegisterModal}
               className="bg-gray-900 text-white hover:bg-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
               Cadastrar
-            </Link>
+            </button>
           </div>
 
           {/* Mobile menu button */}
@@ -118,24 +135,37 @@ export default function Navbar() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <div className="flex space-x-2">
-                  <Link
-                    href="/entrar"
+                  <button
+                    onClick={() => {
+                      openLoginModal();
+                      setIsMenuOpen(false);
+                    }}
                     className="flex-1 text-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
                   >
                     Entrar
-                  </Link>
-                  <Link
-                    href="/cadastrar"
+                  </button>
+                  <button
+                    onClick={() => {
+                      openRegisterModal();
+                      setIsMenuOpen(false);
+                    }}
                     className="flex-1 text-center bg-gray-900 text-white hover:bg-gray-800 px-3 py-2 rounded-lg text-base font-medium transition-colors"
                   >
                     Cadastrar
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        initialTab={authModalTab}
+      />
     </nav>
   );
 }
