@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
 
 interface DatabaseInfo {
   connected: boolean;
@@ -27,15 +27,12 @@ interface DatabaseInfo {
 }
 
 export default function TestDatabasePage() {
+  const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DatabaseInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDatabaseInfo();
-  }, []);
-
-  const fetchDatabaseInfo = async () => {
+  const fetchDatabaseInfo = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -60,14 +57,14 @@ export default function TestDatabasePage() {
       try {
         // Try to get table information using a simple approach
         const { data: tables, error: tablesError } = await supabase
-          .from('information_schema.tables')
+          .from<{ table_name: string }>('information_schema.tables')
           .select('table_name')
           .eq('table_schema', 'public')
           .limit(10);
 
         if (!tablesError && tables) {
           tableCount = tables.length;
-          sampleTables = tables.map(t => ({ name: t.table_name, count: 'N/A', owner: 'public' }));
+          sampleTables = tables.map((table: { table_name: string }) => ({ name: table.table_name, count: 'N/A', owner: 'public' }));
         }
       } catch (tablesErr) {
         // If we can't get table info, that's okay - just show connection status
@@ -98,7 +95,11 @@ export default function TestDatabasePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchDatabaseInfo();
+  }, [fetchDatabaseInfo]);
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
