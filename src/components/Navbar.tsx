@@ -90,6 +90,12 @@ export default function Navbar() {
             >
               Cadastrar
             </button>
+            <Link
+              href="/admin"
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Admin
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -134,13 +140,13 @@ export default function Navbar() {
                   placeholder="Buscar conteúdo..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <div className="flex space-x-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
                       openLoginModal();
                       setIsMenuOpen(false);
                     }}
-                    className="flex-1 text-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
+                    className="text-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
                   >
                     Entrar
                   </button>
@@ -149,10 +155,17 @@ export default function Navbar() {
                       openRegisterModal();
                       setIsMenuOpen(false);
                     }}
-                    className="flex-1 text-center bg-gray-900 text-white hover:bg-gray-800 px-3 py-2 rounded-lg text-base font-medium transition-colors"
+                    className="text-center bg-gray-900 text-white hover:bg-gray-800 px-3 py-2 rounded-lg text-base font-medium transition-colors"
                   >
                     Cadastrar
                   </button>
+                  <Link
+                    href="/admin"
+                    className="text-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Admin
+                  </Link>
                 </div>
               </div>
             </div>
