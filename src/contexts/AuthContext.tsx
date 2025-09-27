@@ -77,11 +77,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         // PGRST116 = table/row not found, which might be expected for new users
         if (error.code === 'PGRST116') {
-          console.warn('Profile not found, user might be newly registered:', userId);
+          console.warn('Profile not found, creating new profile for user:', userId);
           // Try to create profile for this user
           await createUserProfile(userId);
         } else {
-          console.error('Error fetching profile:', error);
+          console.error('Error fetching profile:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            fullError: error
+          });
         }
         return;
       }
