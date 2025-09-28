@@ -59,38 +59,75 @@ export default function AdminPage() {
       let detailedTables: Array<{ name: string; count: number; owner: string; error?: string }> = [];
 
       try {
-        // Get all tables in public schema
-        const { data: tables, error: tablesError } = await supabase
-          .from('information_schema.tables')
-          .select('table_name, table_schema')
-          .eq('table_schema', 'public')
-          .order('table_name');
+        // Define known tables to check (instead of relying on information_schema.tables)
+        const knownTables = [
+          'profiles',
+          'test_users',
+          'test_posts',
+          'test_categories'
+        ];
 
-        if (!tablesError && tables) {
-          tableCount = tables.length;
+        tableCount = knownTables.length;
 
-          // Get row count for each table
-          for (const table of tables) {
-            try {
-              const { count, error: countError } = await supabase
-                .from(table.table_name)
-                .select('*', { count: 'exact', head: true });
+        // Get row count for each known table
+        for (const tableName of knownTables) {
+          try {
+            const { count, error: countError } = await supabase
+              .from(tableName)
+              .select('*', { count: 'exact', head: true });
 
-              detailedTables.push({
-                name: table.table_name,
-                count: countError ? 'N/A' : (count || 0),
-                owner: 'public',
-                error: countError?.message
-              });
-            } catch (countErr) {
-              detailedTables.push({
-                name: table.table_name,
-                count: 'Error',
-                owner: 'public',
-                error: 'Could not count rows'
-              });
+            detailedTables.push({
+              name: tableName,
+              count: countError ? 'N/A' : (count || 0),
+              owner: 'public',
+              error: countError?.message
+            });
+          } catch (countErr) {
+            detailedTables.push({
+              name: tableName,
+              count: 'Error',
+              owner: 'public',
+              error: 'Could not count rows'
+            });
+          }
+        }
+
+        // Also try to get tables from information_schema as fallback
+        try {
+          const { data: schemaTables, error: schemaError } = await supabase
+            .from('information_schema.tables')
+            .select('table_name')
+            .eq('table_schema', 'public')
+            .limit(20);
+
+          if (!schemaError && schemaTables) {
+            // Add any additional tables found in schema
+            for (const schemaTable of schemaTables) {
+              const tableExists = detailedTables.some(t => t.name === schemaTable.table_name);
+              if (!tableExists) {
+                try {
+                  const { count } = await supabase
+                    .from(schemaTable.table_name)
+                    .select('*', { count: 'exact', head: true });
+
+                  detailedTables.push({
+                    name: schemaTable.table_name,
+                    count: count || 0,
+                    owner: 'public'
+                  });
+                } catch {
+                  detailedTables.push({
+                    name: schemaTable.table_name,
+                    count: 'N/A',
+                    owner: 'public',
+                    error: 'Could not access'
+                  });
+                }
+              }
             }
           }
+        } catch (schemaErr) {
+          console.log('Could not access information_schema.tables:', schemaErr);
         }
       } catch (tablesErr) {
         console.log('Could not get table information:', tablesErr);
