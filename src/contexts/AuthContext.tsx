@@ -103,14 +103,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUser(session.user);
-        await fetchUserProfile(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          setUser(session.user);
+          await fetchUserProfile(session.user.id);
+        }
+
+        // Always set loading to false after initial check, with timeout as fallback
+        setTimeout(() => setLoading(false), 3000);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     getInitialSession();
@@ -119,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event);
-        
+
         if (session?.user) {
           setUser(session.user);
           await fetchUserProfile(session.user.id);
@@ -127,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setProfile(null);
         }
-        
+
         setLoading(false);
       }
     );

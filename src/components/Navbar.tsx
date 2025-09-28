@@ -87,9 +87,13 @@ export default function Navbar() {
             </div>
 
             {/* Auth Buttons/User Menu */}
-            {!loading && (
-              <div className="flex items-center space-x-3">
-                {user ? (
+            <div className="flex items-center space-x-3">
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-gray-600">Carregando...</span>
+                </div>
+              ) : user ? (
                   <div className="relative">
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -137,24 +141,23 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <>
-                    <button
-                      onClick={openLoginModal}
-                      className="text-gray-600 hover:text-blue-600 px-4 py-2 text-base font-medium transition-colors"
-                    >
-                      Entrar
-                    </button>
-                    <button
-                      onClick={openRegisterModal}
-                      className="bg-gray-900 text-white hover:bg-gray-800 px-6 py-3 rounded-lg text-base font-medium transition-colors shadow-sm"
-                    >
-                      Cadastrar
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+              ) : (
+                <>
+                  <button
+                    onClick={openLoginModal}
+                    className="text-gray-600 hover:text-blue-600 px-4 py-2 text-base font-medium transition-colors"
+                  >
+                    Entrar
+                  </button>
+                  <button
+                    onClick={openRegisterModal}
+                    className="bg-gray-900 text-white hover:bg-gray-800 px-6 py-3 rounded-lg text-base font-medium transition-colors shadow-sm"
+                  >
+                    Cadastrar
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Mobile menu button */}
