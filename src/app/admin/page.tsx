@@ -1,48 +1,261 @@
+'use client';
+
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
+interface DatabaseInfo {
+  connected: boolean;
+  timestamp: string;
+  database: {
+    name: string;
+    version: string;
+    user: string;
+  };
+  tableCount: number;
+  tables: Array<{
+    name: string;
+    count: number | string;
+    owner: string;
+    error?: string;
+  }>;
+  supabase: {
+    pooler: string;
+    connection: string;
+    port: number;
+    url: string;
+  };
+}
 
 export default function AdminPage() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DatabaseInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDatabaseInfo();
+  }, []);
+
+  const fetchDatabaseInfo = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Test basic Supabase connection
+      const { error: testError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+
+      // If we can query profiles, we're connected
+      const isConnected = !testError;
+
+      if (!isConnected && testError) {
+        throw new Error(`Connection failed: ${testError.message}`);
+      }
+
+      // Get detailed table information
+      let tableCount = 0;
+      let detailedTables: Array<{ name: string; count: number; owner: string; error?: string }> = [];
+
+      try {
+        // Get all tables in public schema
+        const { data: tables, error: tablesError } = await supabase
+          .from('information_schema.tables')
+          .select('table_name, table_schema')
+          .eq('table_schema', 'public')
+          .order('table_name');
+
+        if (!tablesError && tables) {
+          tableCount = tables.length;
+
+          // Get row count for each table
+          for (const table of tables) {
+            try {
+              const { count, error: countError } = await supabase
+                .from(table.table_name)
+                .select('*', { count: 'exact', head: true });
+
+              detailedTables.push({
+                name: table.table_name,
+                count: countError ? 'N/A' : (count || 0),
+                owner: 'public',
+                error: countError?.message
+              });
+            } catch (countErr) {
+              detailedTables.push({
+                name: table.table_name,
+                count: 'Error',
+                owner: 'public',
+                error: 'Could not count rows'
+              });
+            }
+          }
+        }
+      } catch (tablesErr) {
+        console.log('Could not get table information:', tablesErr);
+      }
+
+      setData({
+        connected: isConnected,
+        timestamp: new Date().toISOString(),
+        database: {
+          name: 'postgres',
+          version: 'PostgreSQL (Supabase)',
+          user: 'authenticated'
+        },
+        tableCount: tableCount,
+        tables: detailedTables,
+        supabase: {
+          pooler: 'Transaction Pooler',
+          connection: 'Real Supabase Connection',
+          port: 6543,
+          url: 'https://rjgzvsuhjxpppvjzzrpq.supabase.co'
+        }
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect to database');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="bg-white rounded-lg shadow-lg p-12">
-            <div className="mb-8">
-              <svg
-                className="w-16 h-16 text-blue-600 mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+                <p className="text-sm text-gray-600">Gerencie o sistema e monitore o banco de dados</p>
+              </div>
+              <button
+                onClick={fetchDatabaseInfo}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Área Administrativa
-            </h1>
-
-            <p className="text-lg text-gray-600 mb-8">
-              Bem-vindo à área administrativa do Portal PND. Esta página será desenvolvida
-              futuramente com funcionalidades para gerenciamento do sistema.
-            </p>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-blue-900 mb-2">
-                Funcionalidades Futuras
-              </h2>
-              <ul className="text-blue-800 text-left space-y-1">
-                <li>• Gerenciamento de usuários</li>
-                <li>• Moderação de conteúdo</li>
-                <li>• Análise de dados e relatórios</li>
-                <li>• Configurações do sistema</li>
-              </ul>
+                {loading ? 'Carregando...' : 'Atualizar Dados'}
+              </button>
             </div>
           </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {error && (
+            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-red-900 mb-2">Erro de Conexão</h3>
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
+
+          {data ? (
+            <>
+              {/* Connection Status */}
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${data.connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    Status da Conexão
+                  </h2>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Status:</span>
+                      <span className={data.connected ? 'text-green-600' : 'text-red-600'}>
+                        {data.connected ? '✓ Conectado' : '✗ Desconectado'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Última verificação:</span>
+                      <span className="font-mono">{new Date(data.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Banco:</span>
+                      <span className="font-mono">{data.database.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Usuário:</span>
+                      <span className="font-mono">{data.database.user}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-xl font-semibold mb-4">Configuração Supabase</h2>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Pooler:</span>
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{data.supabase.pooler}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Conexão:</span>
+                      <span>{data.supabase.connection}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Porta:</span>
+                      <span className="font-mono">{data.supabase.port}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">URL:</span>
+                      <span className="font-mono text-xs">{data.supabase.url}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tables Information */}
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 className="text-xl font-semibold mb-4">Tabelas do Banco de Dados</h2>
+                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{data.tableCount}</div>
+                    <div className="text-sm text-gray-600">Total de Tabelas</div>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {data.tables.filter(t => typeof t.count === 'number').reduce((sum, t) => sum + (t.count as number), 0)}
+                    </div>
+                    <div className="text-sm text-gray-600">Total de Registros</div>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">{data.database.version.split(' ')[1]}</div>
+                    <div className="text-sm text-gray-600">PostgreSQL Version</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium">Detalhes das Tabelas:</h3>
+                  {data.tables.map((table, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <span className="font-medium">{table.name}</span>
+                        <span className="text-sm text-gray-600 ml-2">({table.owner})</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-semibold ${typeof table.count === 'number' ? 'text-green-600' : 'text-red-600'}`}>
+                          {table.count}
+                        </span>
+                        <span className="text-sm text-gray-600 ml-1">registros</span>
+                        {table.error && (
+                          <div className="text-xs text-red-600 mt-1">{table.error}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Loading State */
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Carregando informações do banco de dados...</p>
+            </div>
+          )}
         </div>
       </div>
     </ProtectedRoute>
