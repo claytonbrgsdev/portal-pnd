@@ -11,7 +11,7 @@ export default function Navbar() {
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const { user, profile, signOut, loading } = useAuth();
+  const { user, profile, signOut, loading, isAdmin } = useAuth();
 
   const navItems = [
     { name: 'Início', href: '/' },
