@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './AuthModal';
@@ -11,7 +11,24 @@ export default function Navbar() {
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const { user, profile, signOut, loading, isAdmin } = useAuth();
+  const { user, profile, signOut, loading, isAdmin, checkIsAdmin } = useAuth();
+  const [adminChecked, setAdminChecked] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+  // Check admin status when user is logged in but profile not loaded
+  useEffect(() => {
+    const verifyAdminStatus = async () => {
+      if (user && !profile && !adminChecked) {
+        console.log('Checking admin status for user:', user.email);
+        setAdminChecked(true);
+        const adminStatus = await checkIsAdmin();
+        setIsUserAdmin(adminStatus);
+        console.log('Admin status result:', adminStatus);
+      }
+    };
+
+    verifyAdminStatus();
+  }, [user, profile, adminChecked, checkIsAdmin]);
 
   const navItems = [
     { name: 'Início', href: '/' },
@@ -118,7 +135,7 @@ export default function Navbar() {
                         >
                           Meu Painel
                         </Link>
-                        {profile?.role === 'admin' && (
+                        {(profile?.role === 'admin' || isUserAdmin) && (
                           <Link
                             href="/admin"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -223,7 +240,7 @@ export default function Navbar() {
                           >
                             Meu Painel
                           </Link>
-                          {profile?.role === 'admin' && (
+                          {(profile?.role === 'admin' || isUserAdmin) && (
                             <Link
                               href="/admin"
                               className="block text-gray-600 hover:text-blue-600 px-3 py-2 text-base font-medium transition-colors"

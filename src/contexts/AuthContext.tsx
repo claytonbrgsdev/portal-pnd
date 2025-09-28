@@ -30,7 +30,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  const isAdmin = profile?.role === 'admin';
+  // Check if current user is admin (works even if profile not loaded)
+  const checkIsAdmin = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+      }
+
+      return data?.role === 'admin';
+    } catch (error) {
+      console.error('Unexpected error checking admin status:', error);
+      return false;
+    }
+  }, [user, supabase]);
+
+  const isAdmin = profile?.role === 'admin' || false; // Fallback to false if profile not loaded
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     console.log('Fetching profile for user ID:', userId);
