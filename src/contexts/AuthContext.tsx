@@ -35,51 +35,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = useCallback(async (userId: string) => {
     console.log('Fetching profile for user ID:', userId);
 
-    const createUserProfile = async (userId: string) => {
+  const createUserProfile = async (userId: string) => {
       try {
         console.log('Creating profile for user:', userId);
 
-        // Get user info from auth
-        const { data: authUser, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error('Error getting auth user:', authError);
-          return;
-        }
-        if (!authUser.user) {
-          console.error('No auth user found');
-          return;
-        }
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Profile creation timeout')), 5000);
+        });
 
-        console.log('Auth user found:', authUser.user.email);
+        const createPromise = async () => {
+          // Get user info from auth
+          const { data: authUser, error: authError } = await supabase.auth.getUser();
+          if (authError) {
+            console.error('Error getting auth user:', authError);
+            return;
+          }
+          if (!authUser.user) {
+            console.error('No auth user found');
+            return;
+          }
 
-        const { data, error } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: userId,
-              email: authUser.user.email || '',
-              name: authUser.user.user_metadata?.name || '',
-              role: 'user',
-              created_at: new Date().toISOString(),
-            }
-          ])
-          .select()
-          .single();
+          console.log('Auth user found:', authUser.user.email);
 
-        if (error) {
-          console.error('Error creating profile:', {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            fullError: error
-          });
-          return;
-        }
+          const { data, error } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: userId,
+                email: authUser.user.email || '',
+                name: authUser.user.user_metadata?.name || '',
+                role: 'user',
+                created_at: new Date().toISOString(),
+              }
+            ])
+            .select()
+            .single();
 
-        if (data) {
-          console.log('Profile created successfully:', data);
-          setProfile(data);
-        }
+          if (error) {
+            console.error('Error creating profile:', {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              fullError: error
+            });
+            return;
+          }
+
+          if (data) {
+            console.log('Profile created successfully:', data);
+            setProfile(data);
+          }
+        };
+
+        await Promise.race([createPromise(), timeoutPromise]);
       } catch (error) {
         console.error('Unexpected error creating profile:', error);
       }
@@ -87,22 +96,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log('Attempting to fetch profile from database...');
-      const { data, error } = await supabase
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+      });
+
+      const fetchPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
       console.log('Profile fetch result:', { data: !!data, error: !!error });
 
       if (error) {
+        console.log('Error in profile fetch:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          fullError: error
+        });
+
         // PGRST116 = table/row not found, which might be expected for new users
         if (error.code === 'PGRST116') {
           console.warn('Profile not found, creating new profile for user:', userId);
           // Try to create profile for this user
           await createUserProfile(userId);
         } else {
-          console.error('Error fetching profile:', {
+          console.error('Error fetching profile - not PGRST116:', {
             code: error.code,
             message: error.message,
             details: error.details,
@@ -121,6 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Unexpected error fetching profile:', error);
+    } finally {
+      // Ensure loading is always reset
+      console.log('Ensuring loading is reset after profile fetch');
+      setLoading(false);
     }
   }, [supabase]);
 
