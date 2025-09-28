@@ -69,26 +69,52 @@ export default function AdminPage() {
         if (schemaError) {
           console.error('Failed to fetch tables from information_schema:', schemaError);
           // Don't try fallbacks - just show the error
-          setData({
-            ...data,
+          const errorData = {
+            connected: isConnected,
+            timestamp: new Date().toISOString(),
+            database: {
+              name: 'postgres',
+              version: 'PostgreSQL (Supabase)',
+              user: 'authenticated'
+            },
             tableCount: 0,
             tables: [{
               name: 'information_schema.tables',
               count: 'Fetch falhou',
               owner: 'system',
               error: schemaError.message
-            }]
-          });
+            }],
+            supabase: {
+              pooler: 'Transaction Pooler',
+              connection: 'Real Supabase Connection',
+              port: 6543,
+              url: 'https://rjgzvsuhjxpppvjzzrpq.supabase.co'
+            }
+          };
+          setData(errorData);
           return;
         }
 
         if (!schemaTables || schemaTables.length === 0) {
           console.log('No tables found in information_schema');
-          setData({
-            ...data,
+          const emptyData = {
+            connected: isConnected,
+            timestamp: new Date().toISOString(),
+            database: {
+              name: 'postgres',
+              version: 'PostgreSQL (Supabase)',
+              user: 'authenticated'
+            },
             tableCount: 0,
-            tables: []
-          });
+            tables: [],
+            supabase: {
+              pooler: 'Transaction Pooler',
+              connection: 'Real Supabase Connection',
+              port: 6543,
+              url: 'https://rjgzvsuhjxpppvjzzrpq.supabase.co'
+            }
+          };
+          setData(emptyData);
           return;
         }
 
@@ -134,7 +160,7 @@ export default function AdminPage() {
         });
       }
 
-      setData({
+      const successData = {
         connected: isConnected,
         timestamp: new Date().toISOString(),
         database: {
@@ -150,11 +176,34 @@ export default function AdminPage() {
           port: 6543,
           url: 'https://rjgzvsuhjxpppvjzzrpq.supabase.co'
         }
-      });
+      };
+      setData(successData);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect to database');
-      setData(null);
+      const errorData = {
+        connected: false,
+        timestamp: new Date().toISOString(),
+        database: {
+          name: 'postgres',
+          version: 'PostgreSQL (Supabase)',
+          user: 'error'
+        },
+        tableCount: 0,
+        tables: [{
+          name: 'connection_error',
+          count: 'Erro de conexão',
+          owner: 'system',
+          error: err instanceof Error ? err.message : 'Failed to connect to database'
+        }],
+        supabase: {
+          pooler: 'Transaction Pooler',
+          connection: 'Connection Failed',
+          port: 6543,
+          url: 'https://rjgzvsuhjxpppvjzzrpq.supabase.co'
+        }
+      };
+      setData(errorData);
     } finally {
       setLoading(false);
     }
