@@ -59,57 +59,58 @@ export default function AdminPage() {
       let detailedTables: Array<{ name: string; count: number; owner: string; error?: string }> = [];
 
       try {
-        // First try to get tables from information_schema (if accessible)
-        let allTables: string[] = [];
+        // Try to get tables from information_schema
+        const { data: schemaTables, error: schemaError } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', 'public')
+          .order('table_name');
 
-        try {
-          const { data: schemaTables, error: schemaError } = await supabase
-            .from('information_schema.tables')
-            .select('table_name')
-            .eq('table_schema', 'public')
-            .order('table_name');
-
-          if (!schemaError && schemaTables) {
-            allTables = schemaTables.map(t => t.table_name);
-            tableCount = allTables.length;
-            console.log('Found tables via information_schema:', allTables);
-          } else {
-            console.log('information_schema.tables not accessible, using fallback method');
-            // Fallback: try common table names that should exist
-            const fallbackTables = ['profiles', 'test_users', 'test_posts', 'test_categories'];
-            allTables = fallbackTables;
-            tableCount = 0; // Will count only accessible ones
-          }
-        } catch (schemaErr) {
-          console.log('Could not access information_schema.tables:', schemaErr);
-          // Fallback: try common table names
-          const fallbackTables = ['profiles', 'test_users', 'test_posts', 'test_categories'];
-          allTables = fallbackTables;
-          tableCount = 0; // Will count only accessible ones
+        if (schemaError) {
+          console.error('Failed to fetch tables from information_schema:', schemaError);
+          // Don't try fallbacks - just show the error
+          setData({
+            ...data,
+            tableCount: 0,
+            tables: [{
+              name: 'information_schema.tables',
+              count: 'Fetch falhou',
+              owner: 'system',
+              error: schemaError.message
+            }]
+          });
+          return;
         }
 
+        if (!schemaTables || schemaTables.length === 0) {
+          console.log('No tables found in information_schema');
+          setData({
+            ...data,
+            tableCount: 0,
+            tables: []
+          });
+          return;
+        }
+
+        // Success - we got the tables
+        tableCount = schemaTables.length;
+        const tableNames = schemaTables.map(t => t.table_name);
+
+        console.log('Successfully fetched tables:', tableNames);
+
         // Get row count for each table
-        for (const tableName of allTables) {
+        for (const tableName of tableNames) {
           try {
             const { count, error: countError } = await supabase
               .from(tableName)
               .select('*', { count: 'exact', head: true });
 
-            if (!countError) {
-              tableCount = Math.max(tableCount, 1); // At least this table exists
-              detailedTables.push({
-                name: tableName,
-                count: count || 0,
-                owner: 'public'
-              });
-            } else {
-              detailedTables.push({
-                name: tableName,
-                count: 'N/A',
-                owner: 'public',
-                error: countError.message
-              });
-            }
+            detailedTables.push({
+              name: tableName,
+              count: countError ? 'N/A' : (count || 0),
+              owner: 'public',
+              error: countError?.message
+            });
           } catch (countErr) {
             detailedTables.push({
               name: tableName,
@@ -120,7 +121,17 @@ export default function AdminPage() {
           }
         }
       } catch (tablesErr) {
-        console.log('Could not get table information:', tablesErr);
+        console.error('Unexpected error fetching table information:', tablesErr);
+        setData({
+          ...data,
+          tableCount: 0,
+          tables: [{
+            name: 'table_fetch',
+            count: 'Erro inesperado',
+            owner: 'system',
+            error: 'Falha ao buscar informações de tabelas'
+          }]
+        });
       }
 
       setData({
