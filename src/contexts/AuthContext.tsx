@@ -8,8 +8,10 @@ type UserProfile = {
   id: string;
   email: string;
   name?: string;
+  full_name?: string;
   role?: 'user' | 'admin';
   created_at: string;
+  updated_at?: string;
 };
 
 type AuthContextType = {
@@ -35,25 +37,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
 
     try {
-      const { data, error } = await supabase
+      // First check profile table
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (error) {
-        console.error('Error checking admin status:', error);
-        return false;
+      if (!profileError && profileData?.role === 'admin') {
+        return true;
       }
 
-      return data?.role === 'admin';
+      // Fallback to JWT metadata
+      return user.user_metadata?.user_role === 'admin';
     } catch (error) {
       console.error('Unexpected error checking admin status:', error);
       return false;
     }
   }, [user, supabase]);
 
-  const isAdmin = profile?.role === 'admin' || false; // Fallback to false if profile not loaded
+  const isAdmin = profile?.role === 'admin' || user?.user_metadata?.user_role === 'admin' || false;
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     console.log('Fetching profile for user ID:', userId);
@@ -131,7 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as { data: any; error: any };
 
       console.log('Profile fetch result:', { data: !!data, error: !!error });
 

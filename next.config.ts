@@ -4,7 +4,8 @@ import type { NextConfig } from "next";
 const isProd = process.env.NODE_ENV === 'production';
 
 const nextConfig: NextConfig = {
-  output: 'export',
+  // Removed static export to support dynamic features like cookies/auth
+  // output: 'export', // Commented out to enable dynamic rendering
   trailingSlash: true,
   ...(isProd && {
     basePath: '/portal-pnd',
@@ -15,7 +16,7 @@ const nextConfig: NextConfig = {
   },
   // Silence the workspace root warning
   outputFileTracingRoot: undefined,
-  // Configure for static export
+  // Configure for dynamic rendering
   experimental: {
     esmExternals: true,
   },

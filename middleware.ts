@@ -2,8 +2,11 @@ import { createClient } from '@/utils/supabase/route';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  console.log('🔍 Middleware triggered for:', request.nextUrl.pathname);
+
   // Skip middleware for static exports to avoid conflicts
   if (process.env.NODE_ENV === 'production' && process.env.NEXT_OUTPUT === 'export') {
+    console.log('🔍 Skipping middleware for static export');
     return NextResponse.next();
   }
 
@@ -13,8 +16,7 @@ export async function middleware(request: NextRequest) {
 
     // Refresh session if expired - required for Server Components
     const { data: { session } } = await supabase.auth.getSession();
-
-    const { pathname } = request.nextUrl;
+    console.log('🔍 Session exists:', !!session, session?.user?.email);
 
     // Protected routes that require authentication
     const protectedRoutes = ['/admin', '/dashboard'];
@@ -23,9 +25,17 @@ export async function middleware(request: NextRequest) {
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
     const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
 
+    console.log('🔍 Route check:', {
+      pathname,
+      isProtectedRoute,
+      isAdminRoute,
+      sessionUserId: session?.user?.id
+    });
+
     if (isProtectedRoute) {
       // If no session and trying to access protected route
       if (!session) {
+        console.log('🔍 No session, redirecting to login');
         const redirectUrl = new URL('/', request.url);
         return NextResponse.redirect(redirectUrl);
       }
@@ -33,18 +43,25 @@ export async function middleware(request: NextRequest) {
       // If admin route, check if user is admin
       if (isAdminRoute) {
         try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
+          console.log('🔍 Checking admin status for user:', session.user.id);
 
-          if (!profile || profile.role !== 'admin') {
+          // Check if user has admin role in JWT metadata
+          const isAdminFromJWT = session.user.user_metadata?.user_role === 'admin';
+
+          console.log('🔍 Admin check:', {
+            jwtRole: session.user.user_metadata?.user_role,
+            isAdminFromJWT
+          });
+
+          if (!isAdminFromJWT) {
+            console.log('🔍 User is not admin, redirecting to dashboard');
             const redirectUrl = new URL('/dashboard', request.url);
             return NextResponse.redirect(redirectUrl);
+          } else {
+            console.log('🔍 User is admin, allowing access');
           }
         } catch (error) {
-          console.error('Error checking admin role:', error);
+          console.error('🔍 Error checking admin role:', error);
           // If can't verify admin status, redirect to dashboard
           const redirectUrl = new URL('/dashboard', request.url);
           return NextResponse.redirect(redirectUrl);
