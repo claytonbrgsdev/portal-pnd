@@ -33,12 +33,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = profile?.role === 'admin';
 
   const fetchUserProfile = useCallback(async (userId: string) => {
+    console.log('Fetching profile for user ID:', userId);
+
     const createUserProfile = async (userId: string) => {
       try {
-        
+        console.log('Creating profile for user:', userId);
+
         // Get user info from auth
-        const { data: authUser } = await supabase.auth.getUser();
-        if (!authUser.user) return;
+        const { data: authUser, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error('Error getting auth user:', authError);
+          return;
+        }
+        if (!authUser.user) {
+          console.error('No auth user found');
+          return;
+        }
+
+        console.log('Auth user found:', authUser.user.email);
 
         const { data, error } = await supabase
           .from('profiles')
@@ -55,11 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (error) {
-          console.error('Error creating profile:', error);
+          console.error('Error creating profile:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            fullError: error
+          });
           return;
         }
 
         if (data) {
+          console.log('Profile created successfully:', data);
           setProfile(data);
         }
       } catch (error) {
@@ -68,11 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     try {
+      console.log('Attempting to fetch profile from database...');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+
+      console.log('Profile fetch result:', { data: !!data, error: !!error });
 
       if (error) {
         // PGRST116 = table/row not found, which might be expected for new users
@@ -93,7 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
+        console.log('Profile loaded successfully:', data);
         setProfile(data);
+      } else {
+        console.log('No profile data returned');
       }
     } catch (error) {
       console.error('Unexpected error fetching profile:', error);
@@ -101,22 +125,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...');
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
+          console.log('User found in session:', session.user.email);
           setUser(session.user);
           await fetchUserProfile(session.user.id);
+        } else {
+          console.log('No user in session');
         }
 
-        // Always set loading to false after initial check, with timeout as fallback
-        setTimeout(() => setLoading(false), 3000);
-        setLoading(false);
+        // Set loading to false after a short delay to ensure everything is processed
+        setTimeout(() => {
+          if (isMounted) {
+            console.log('Setting loading to false');
+            setLoading(false);
+          }
+        }, 1000);
       } catch (error) {
         console.error('Error getting initial session:', error);
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -125,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        console.log('Auth state changed:', event, session?.user?.email);
 
         if (session?.user) {
           setUser(session.user);
@@ -135,11 +171,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
         }
 
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserProfile, supabase.auth]);
 
   const signUp = async (email: string, password: string, name: string) => {

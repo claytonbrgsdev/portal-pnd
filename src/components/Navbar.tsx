@@ -88,12 +88,7 @@ export default function Navbar() {
 
             {/* Auth Buttons/User Menu */}
             <div className="flex items-center space-x-3">
-              {loading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-gray-600">Carregando...</span>
-                </div>
-              ) : user ? (
+              {console.log('Navbar render:', { user: !!user, profile: !!profile, loading, isAdmin }) || user ? (
                   <div className="relative">
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
