@@ -2,13 +2,10 @@
 
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import LoginLogoutButton from '@/components/LoginLogoutButton';
 
 export default function DashboardPage() {
-  const { user, profile, signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  const { user, profile } = useAuth();
 
   return (
     <ProtectedRoute>
@@ -23,12 +20,7 @@ export default function DashboardPage() {
                   Bem-vindo, {profile?.name || user?.email}!
                 </p>
               </div>
-              <button 
-                onClick={handleSignOut}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Sair
-              </button>
+              <LoginLogoutButton />
             </div>
           </div>
         </div>

@@ -113,3 +113,35 @@ WHERE id IN (
 UPDATE public.profiles
 SET role = 'admin'
 WHERE email = 'claytonborgesdev@gmail.com';
+
+-- Function to get all public tables
+CREATE OR REPLACE FUNCTION get_public_tables()
+RETURNS TABLE(table_name text, table_schema text)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    t.table_name::text,
+    t.table_schema::text
+  FROM information_schema.tables t
+  WHERE t.table_schema = 'public'
+    AND t.table_type = 'BASE TABLE'
+  ORDER BY t.table_name;
+$$;
+
+-- Function to get table columns
+CREATE OR REPLACE FUNCTION get_table_columns(table_name_param text)
+RETURNS TABLE(column_name text, data_type text, is_nullable text, column_default text)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    c.column_name::text,
+    c.data_type::text,
+    c.is_nullable::text,
+    c.column_default::text
+  FROM information_schema.columns c
+  WHERE c.table_name = table_name_param
+    AND c.table_schema = 'public'
+  ORDER BY c.ordinal_position;
+$$;

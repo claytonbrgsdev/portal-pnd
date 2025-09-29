@@ -15,7 +15,7 @@ interface ColumnInfo {
 }
 
 interface TableData {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export default function DatabaseManager() {
@@ -26,6 +26,7 @@ export default function DatabaseManager() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'tables' | 'structure' | 'data' | 'sql'>('tables')
   const [sqlQuery, setSqlQuery] = useState('')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sqlResults, setSqlResults] = useState<any>(null)
   const [editingCell, setEditingCell] = useState<{rowIndex: number, columnName: string} | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -436,17 +437,11 @@ export default function DatabaseManager() {
             {sqlResults && (
               <div className="mt-4">
                 <h4 className="text-md font-medium text-gray-900 mb-2">Results</h4>
-                {sqlResults.error ? (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-red-800">{sqlResults.error}</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <pre className="bg-gray-50 p-4 rounded-md text-sm overflow-auto">
-                      {JSON.stringify(sqlResults, null, 2)}
-                    </pre>
-                  </div>
-                )}
+                <div className="overflow-x-auto">
+                  <pre className="bg-gray-50 p-4 rounded-md text-sm overflow-auto">
+                    {JSON.stringify(sqlResults, null, 2)}
+                  </pre>
+                </div>
               </div>
             )}
           </div>
