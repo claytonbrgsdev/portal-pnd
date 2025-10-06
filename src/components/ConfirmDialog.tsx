@@ -1,37 +1,53 @@
 'use client'
 
 interface ConfirmDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   title: string
-  message: string
+  description: string
   onConfirm: () => void
-  onCancel: () => void
+  onCancel?: () => void
   confirmText?: string
   cancelText?: string
+  loading?: boolean
   variant?: 'danger' | 'warning' | 'info'
 }
 
-export default function ConfirmDialog({
+export function ConfirmDialog({
+  open,
+  onOpenChange,
   title,
-  message,
+  description,
   onConfirm,
   onCancel,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText = 'Confirmar',
+  cancelText = 'Cancelar',
+  loading = false,
   variant = 'danger'
 }: ConfirmDialogProps) {
+  if (!open) return null
+
+  const handleCancel = () => {
+    onOpenChange(false)
+    onCancel?.()
+  }
+
+  const handleConfirm = () => {
+    onConfirm()
+  }
   const getButtonStyles = (isConfirm: boolean) => {
     const baseStyles = 'px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50'
 
     if (isConfirm) {
       switch (variant) {
         case 'danger':
-          return `${baseStyles} text-white bg-red-600 hover:bg-red-700 focus:ring-red-500`
+          return `${baseStyles} text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 disabled:bg-red-400`
         case 'warning':
-          return `${baseStyles} text-white bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500`
+          return `${baseStyles} text-white bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500 disabled:bg-yellow-400`
         case 'info':
-          return `${baseStyles} text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`
+          return `${baseStyles} text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-400`
         default:
-          return `${baseStyles} text-white bg-red-600 hover:bg-red-700 focus:ring-red-500`
+          return `${baseStyles} text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 disabled:bg-red-400`
       }
     } else {
       return `${baseStyles} text-gray-700 bg-gray-100 hover:bg-gray-200 focus:ring-gray-500`
@@ -46,22 +62,24 @@ export default function ConfirmDialog({
             {title}
           </h3>
           <p className="text-gray-600 text-sm leading-relaxed">
-            {message}
+            {description}
           </p>
         </div>
 
         <div className="flex justify-end space-x-3">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
+            disabled={loading}
             className={getButtonStyles(false)}
           >
             {cancelText}
           </button>
           <button
-            onClick={onConfirm}
-            className={getButtonStyles(true)}
+            onClick={handleConfirm}
+            disabled={loading}
+            className={`${getButtonStyles(true)} ${loading ? 'cursor-not-allowed' : ''}`}
           >
-            {confirmText}
+            {loading ? 'Carregando...' : confirmText}
           </button>
         </div>
       </div>

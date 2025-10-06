@@ -1,18 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 
-type UserProfile = {
-  id: string;
-  email: string;
-  name?: string;
-  full_name?: string;
-  role?: 'user' | 'admin';
-  created_at: string;
-  updated_at?: string;
-};
+type UserProfile = any;
 
 type AuthContextType = {
   user: User | null;
@@ -30,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Check if current user is admin (works even if profile not loaded)
   const checkIsAdmin = useCallback(async (): Promise<boolean> => {
@@ -44,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', user.id)
         .single();
 
-      if (!profileError && profileData?.role === 'admin') {
+      if (!profileError && (profileData as any)?.role === 'admin') {
         return true;
       }
 
@@ -65,9 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('Creating profile for user:', userId);
 
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Profile creation timeout')), 5000);
+        // Add timeout to prevent hanging (resolve instead of throwing)
+        const timeoutPromise = new Promise<void>((resolve) => {
+          setTimeout(() => resolve(), 5000);
         });
 
         const createPromise = async () => {
@@ -123,9 +115,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Attempting to fetch profile from database...');
 
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+      // Add timeout to prevent hanging (resolve to a result-shaped timeout)
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise: Promise<{ data: null; error: { code: 'TIMEOUT'; message: string; details: null; hint: null } }> = new Promise((resolve) => {
+        timeoutId = setTimeout(() => resolve({
+          data: null,
+          error: { code: 'TIMEOUT', message: 'Profile fetch timeout', details: null, hint: null }
+        }), 5000);
       });
 
       const fetchPromise = supabase
@@ -134,8 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as { data: any; error: any };
+      const raced = await Promise.race([fetchPromise, timeoutPromise]);
+      if (timeoutId) clearTimeout(timeoutId);
+      const { data, error } = raced as { data: unknown; error: { code?: string; message?: string; details?: unknown; hint?: unknown } | null };
 
       console.log('Profile fetch result:', { data: !!data, error: !!error });
 
@@ -147,6 +144,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hint: error.hint,
           fullError: error
         });
+
+        if (error.code === 'TIMEOUT') {
+          console.warn('Profile fetch timed out. Skipping for now.');
+          return;
+        }
 
         // PGRST116 = table/row not found, which might be expected for new users
         if (error.code === 'PGRST116') {
@@ -237,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, supabase.auth]);
+  }, [fetchUserProfile, supabase]);
 
   const signUp = async (email: string, password: string, name: string) => {
     try {

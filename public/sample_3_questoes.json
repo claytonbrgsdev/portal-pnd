@@ -1,0 +1,89 @@
+[
+  {
+    "metadados": {
+      "questao_numero": 1,
+      "componente": "Matemática",
+      "ano_exame": 2023,
+      "dificuldade": "Médio",
+      "competencia_descricao": "Aplicar proporcionalidade em situações do cotidiano, interpretando representações e solucionando problemas.",
+      "habilidade_codigo": "H03",
+      "habilidade_descricao": "resolver problemas que envolvam razões, proporções e porcentagens.",
+      "informacao_complementar": "Contexto de consumo e comparação de preços.",
+      "objetos_do_conhecimento": [
+        { "codigo": "OC01", "descricao": "porcentagem e aumentos/ descontos sucessivos" },
+        { "codigo": "OC02", "descricao": "razão e proporção" }
+      ]
+    },
+    "elemento_textual_1": {
+      "titulo": "Tabela de Ofertas",
+      "conteudo": "Uma loja anuncia dois descontos sucessivos de 10% e 5% sobre um produto que custa R$ 200,00.",
+      "fonte": { "referencia": "Material didático – exemplo fictício" }
+    },
+    "elemento_textual_2": { "titulo": null, "conteudo": null },
+    "comando_questao": { "texto": "O preço final pago pelo cliente será igual a:" },
+    "julgamento_das_opcoes": [
+      { "id": "A", "enunciado": "R$ 170,00", "gabarito": "ERRADA", "justificativa": "Soma de descontos não é adequada." },
+      { "id": "B", "enunciado": "R$ 171,00", "gabarito": "CORRETA", "justificativa": "200 × 0,9 × 0,95 = 171,00." },
+      { "id": "C", "enunciado": "R$ 180,00", "gabarito": "ERRADA", "justificativa": "Apenas um desconto considerado." },
+      { "id": "D", "enunciado": "R$ 175,00", "gabarito": "ERRADA", "justificativa": "Cálculo incorreto da composição de descontos." }
+    ]
+  },
+  {
+    "metadados": {
+      "questao_numero": 2,
+      "componente": "Língua Portuguesa",
+      "ano_exame": 2024,
+      "dificuldade": "Fácil",
+      "competencia_descricao": "Identificar efeitos de sentido produzidos por recursos linguísticos em textos.",
+      "habilidade_codigo": "H07",
+      "habilidade_descricao": "reconhecer a função de elementos coesivos e conectivos.",
+      "informacao_complementar": "Uso de conectivos adversativos.",
+      "objetos_do_conhecimento": [
+        { "codigo": "OC10", "descricao": "coesão referencial e sequencial" }
+      ]
+    },
+    "elemento_textual_1": {
+      "titulo": "Trecho de crônica",
+      "conteudo": "Ele estudou bastante, mas não conseguiu resolver a última questão.",
+      "fonte": { "referencia": "Crônica fictícia" }
+    },
+    "elemento_textual_2": { "titulo": null, "conteudo": null },
+    "comando_questao": { "texto": "O conectivo 'mas' no trecho estabelece relação de:" },
+    "julgamento_das_opcoes": [
+      { "id": "A", "enunciado": "adição", "gabarito": "ERRADA", "justificativa": "Não há soma de ideias." },
+      { "id": "B", "enunciado": "explicação", "gabarito": "ERRADA", "justificativa": "Não introduz justificativa." },
+      { "id": "C", "enunciado": "adversidade/ oposição", "gabarito": "CORRETA", "justificativa": "Contrapõe o esforço ao insucesso." },
+      { "id": "D", "enunciado": "conclusão", "gabarito": "ERRADA", "justificativa": "Não conclui o raciocínio anterior." }
+    ]
+  },
+  {
+    "metadados": {
+      "questao_numero": 3,
+      "componente": "História",
+      "ano_exame": 2022,
+      "dificuldade": "Difícil",
+      "competencia_descricao": "Analisar processos históricos relacionando-os a transformações sociais e políticas.",
+      "habilidade_codigo": "H12",
+      "habilidade_descricao": "interpretar fontes históricas e reconhecer seus contextos de produção.",
+      "informacao_complementar": "Industrialização e movimentos operários.",
+      "objetos_do_conhecimento": [
+        { "codigo": "OC21", "descricao": "revolução industrial e organização do trabalho" }
+      ]
+    },
+    "elemento_textual_1": {
+      "titulo": "Excerto de jornal do séc. XIX",
+      "conteudo": "Relatos indicam jornadas extenuantes e reivindicações por melhores salários nas fábricas.",
+      "fonte": { "referencia": "Arquivo histórico – reprodução fictícia" }
+    },
+    "elemento_textual_2": { "titulo": null, "conteudo": null },
+    "comando_questao": { "texto": "O excerto retrata um contexto associado principalmente:" },
+    "julgamento_das_opcoes": [
+      { "id": "A", "enunciado": "à crise do Antigo Regime na França.", "gabarito": "ERRADA", "justificativa": "Tema distinto do recorte apresentado." },
+      { "id": "B", "enunciado": "à formação dos movimentos operários no processo de industrialização.", "gabarito": "CORRETA", "justificativa": "Reivindicações e jornadas associam-se ao operariado." },
+      { "id": "C", "enunciado": "ao escravismo colonial luso-brasileiro.", "gabarito": "ERRADA", "justificativa": "Não corresponde ao período/tema do excerto." },
+      { "id": "D", "enunciado": "à expansão marítima ibérica.", "gabarito": "ERRADA", "justificativa": "Sem relação com a industrialização apresentada." }
+    ]
+  }
+]
+
+

@@ -30,6 +30,12 @@ export default function DatabaseManager() {
   const [sqlResults, setSqlResults] = useState<any>(null)
   const [editingCell, setEditingCell] = useState<{rowIndex: number, columnName: string} | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalRows, setTotalRows] = useState(0)
+  const [pageSize] = useState(50)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newRowData, setNewRowData] = useState<Record<string, string>>({})
 
   // Fetch all tables
   const fetchTables = async () => {
@@ -61,14 +67,55 @@ export default function DatabaseManager() {
   }
 
   // Fetch table data
-  const fetchTableData = async (tableName: string) => {
+  const fetchTableData = async (tableName: string, page = 1) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/admin/database/data/${tableName}`)
+      const response = await fetch(`/api/admin/database/data/${tableName}?page=${page}&limit=${pageSize}`)
       const data = await response.json()
-      setTableData(data.data || [])
+
+      if (data.success) {
+        setTableData(data.data || [])
+        setTotalRows(data.pagination?.total || 0)
+        setTotalPages(data.pagination?.totalPages || 1)
+        setCurrentPage(page)
+      } else {
+        console.error('Error fetching table data:', data.error)
+        setTableData([])
+      }
     } catch (error) {
       console.error('Error fetching table data:', error)
+      setTableData([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Add new table row
+  const addTableRow = async (tableName: string) => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/admin/database/data/${tableName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: newRowData }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setShowAddForm(false)
+        setNewRowData({})
+        // Refresh table data
+        await fetchTableData(tableName, currentPage)
+        alert('Row added successfully!')
+      } else {
+        alert(`Failed to add row: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error adding table row:', error)
+      alert('Failed to add row')
     } finally {
       setLoading(false)
     }
@@ -189,8 +236,11 @@ export default function DatabaseManager() {
 
   const handleTableSelect = (tableName: string) => {
     fetchTableStructure(tableName)
-    fetchTableData(tableName)
+    fetchTableData(tableName, 1) // Reset to first page
     setActiveTab('structure')
+    setCurrentPage(1)
+    setTotalPages(1)
+    setTotalRows(0)
   }
 
   return (
@@ -330,7 +380,61 @@ export default function DatabaseManager() {
             >
               Refresh
             </button>
+            <button
+              onClick={() => {
+                setShowAddForm(true)
+                setNewRowData({})
+              }}
+              className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Add Row
+            </button>
           </div>
+
+          {/* Add New Row Form */}
+          {showAddForm && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-md font-medium text-gray-900 mb-3">Add New Row</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                {tableColumns.map((column) => (
+                  <div key={column.column_name}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {column.column_name}
+                    </label>
+                    <input
+                      type="text"
+                      value={newRowData[column.column_name] || ''}
+                      onChange={(e) => setNewRowData({
+                        ...newRowData,
+                        [column.column_name]: e.target.value
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={`Enter ${column.column_name}`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => addTableRow(selectedTable)}
+                  disabled={loading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Adding...' : 'Add Row'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false)
+                    setNewRowData({})
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
@@ -404,6 +508,33 @@ export default function DatabaseManager() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {activeTab === 'data' && tableData.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Showing page {currentPage} of {totalPages} ({totalRows} total rows)
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => fetchTableData(selectedTable, currentPage - 1)}
+                  disabled={currentPage <= 1 || loading}
+                  className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => fetchTableData(selectedTable, currentPage + 1)}
+                  disabled={currentPage >= totalPages || loading}
+                  className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

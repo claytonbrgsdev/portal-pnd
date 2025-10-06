@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- Create admin_actions table
-CREATE TABLE public.admin_actions (
+CREATE TABLE IF NOT EXISTS public.admin_actions (
     id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     admin_id uuid REFERENCES auth.users(id),
     action text NOT NULL,
@@ -31,6 +31,7 @@ ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for admin_actions
 -- Only admins can perform all operations on admin_actions
+DROP POLICY IF EXISTS "Admins manage actions" ON public.admin_actions;
 CREATE POLICY "Admins manage actions" ON public.admin_actions
     FOR ALL TO authenticated
     USING ((auth.jwt() ->> 'user_role') = 'admin')
@@ -55,6 +56,7 @@ CREATE POLICY "Users can insert own profile" ON public.profiles
     WITH CHECK (auth.uid() = id);
 
 -- Admins can view all profiles
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 CREATE POLICY "Admins can view all profiles" ON public.profiles
     FOR SELECT TO authenticated
     USING ((auth.jwt() ->> 'user_role') = 'admin');
@@ -129,6 +131,47 @@ AS $$
   ORDER BY t.table_name;
 $$;
 
+-- Simulation (Simulado) tables
+-- Ensure required extension for UUID generation
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS public.simulado_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  started_at timestamptz NOT NULL DEFAULT now(),
+  finished_at timestamptz,
+  total_questions int NOT NULL DEFAULT 0,
+  correct_answers int NOT NULL DEFAULT 0,
+  score numeric(5,2) GENERATED ALWAYS AS (
+    CASE WHEN total_questions > 0 THEN (correct_answers::numeric * 100) / total_questions ELSE 0 END
+  ) STORED
+);
+
+CREATE TABLE IF NOT EXISTS public.simulado_answers (
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  attempt_id uuid NOT NULL REFERENCES public.simulado_attempts(id) ON DELETE CASCADE,
+  question_id uuid NOT NULL,
+  selected_letter text NOT NULL CHECK (selected_letter IN ('A','B','C','D')),
+  correct_letter text NOT NULL CHECK (correct_letter IN ('A','B','C','D')),
+  is_correct boolean NOT NULL,
+  answered_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.simulado_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.simulado_answers ENABLE ROW LEVEL SECURITY;
+
+-- RLS: users can manage their own attempts and answers
+DROP POLICY IF EXISTS "own attempts" ON public.simulado_attempts;
+CREATE POLICY "own attempts" ON public.simulado_attempts
+  FOR ALL TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "answers via own attempts" ON public.simulado_answers;
+CREATE POLICY "answers via own attempts" ON public.simulado_answers
+  FOR ALL TO authenticated
+  USING (attempt_id IN (SELECT id FROM public.simulado_attempts WHERE user_id = auth.uid()))
+  WITH CHECK (attempt_id IN (SELECT id FROM public.simulado_attempts WHERE user_id = auth.uid()));
+
 -- Function to get table columns
 CREATE OR REPLACE FUNCTION get_table_columns(table_name_param text)
 RETURNS TABLE(column_name text, data_type text, is_nullable text, column_default text)
@@ -144,4 +187,27 @@ AS $$
   WHERE c.table_name = table_name_param
     AND c.table_schema = 'public'
   ORDER BY c.ordinal_position;
+$$;
+
+-- Function to execute custom SQL queries (admin only)
+CREATE OR REPLACE FUNCTION exec_sql(sql_query text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  -- Execute the SQL query and return results as JSON
+  EXECUTE sql_query INTO result;
+  RETURN result;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Return error information as JSON
+    RETURN jsonb_build_object(
+      'error', SQLERRM,
+      'sqlstate', SQLSTATE,
+      'query', sql_query
+    );
+END;
 $$;

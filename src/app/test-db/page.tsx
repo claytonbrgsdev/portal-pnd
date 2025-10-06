@@ -63,7 +63,8 @@ export default function TestDatabasePage() {
           .from('information_schema.tables')
           .select('table_name')
           .eq('table_schema', 'public')
-          .limit(10);
+          .limit(10)
+          .returns<{ table_name: string }[]>();
 
         if (!tablesError && tables) {
           tableCount = tables.length;

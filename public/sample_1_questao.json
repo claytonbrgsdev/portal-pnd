@@ -1,0 +1,62 @@
+{
+    "metadados": {
+      "questao_numero": 5,
+      "componente": "Formação Geral Docente",
+      "ano_exame": 2024,
+      "dificuldade": "Difícil",
+      "competencia_descricao": "C03. constituir a prática docente a partir da compreensão crítica da realidade social, política e cultural em sua complexidade, respeitando a diversidade de natureza ambiental-ecológica, étnico-racial, sexual, de gênero, de faixa geracional, de classe social, religiosa e do público-alvo da educação especial, entre outras, visando à integração de diferentes conhecimentos e perspectivas para a promoção de uma sociedade justa, equânime,igualitária e democrática.",
+      "habilidade_codigo": "H15",
+      "habilidade_descricao": "implementar práticas inclusivas de ensino e de aprendizagem considerando as diferenças esingularidades humanas em espaços escolares e não escolares",
+      "informacao_complementar": "Estimular a interpretação de dados de abrangência e impacto de programas e/ou políticas públicas federais voltadas para a educação básica",
+      "objetos_do_conhecimento": [
+        {
+          "codigo": "OC09",
+          "descricao": "OC09. metodologia de pesquisa em educação e ensino."
+        },
+        {
+          "codigo": "OC21",
+          "descricao": "educação, inclusão e direitos humanos."
+        }
+      ]
+    },
+    "elemento_textual_1": {
+      "titulo": null,
+      "conteudo": "Uma professora realizou um projeto em uma turma de Educação de Jovens e Adultos (EJA) sobre inclusão e direitos humanos no âmbito da alfabetização. Ao longo do projeto, os estudantes deveriam produzir um cordel. Durante o processo de investigação para a sua elaboração, os alunos buscaram informações acerca das memórias individuais e coletivas, o que permitiu a ampliação da compreensão do universo sociocultural e da sua trajetória histórico-temporal. Nesse sentido, o projeto visou transversalizar alfabetização, história e memória individual, coletiva e local, as quais, vinculadas à alfabetização de jovens e adultos, são refletidas na emergência de práticas inclusivas de ensino e de aprendizagem no cotidiano da escola.",
+       "fonte": {
+         "referencia": null
+      }
+    },
+    "elemento_textual_2": {
+      "titulo": null,
+      "conteudo": null
+    },
+    "comando_questao": {
+      "texto": "Nessa situação, a produção de um cordel configura-se como estratégia eficaz para uma prática inclusiva na alfabetização desse público de estudantes porque o cordel,"
+    },
+    "julgamento_das_opcoes": [
+      {
+        "id": "A",
+        "enunciado": "como articulador das vivências de mundo, possibilita que os estudantes aprendam que as significações são construídas a partir das suas experiências.",
+        "gabarito": "ERRADA",
+        "justificativa": "..."
+        },
+      {
+        "id": "B",
+        "enunciado": "como ferramenta teórico-prática, padroniza a compreensão do estudante sobre questões socioculturais e sua trajetória histórico-temporal no local em que está inserido.",
+        "gabarito": "CORRETA",
+        "justificativa": "..."
+        },
+      {
+        "id": "C",
+        "enunciado": "como texto alfabetizador, diverte e se prende à fabulação, por ser dogmático ao abordar aspectos relacionados à religiosidade, à cultura e à percepção política dos indivíduos.",
+        "gabarito": "ERRADA",
+        "justificativa": "..."
+      },
+      {
+        "id": "D",
+        "enunciado": "como ação investigativa sobre as memórias individuais e coletivas, simplifica a compreensão do universo sociocultural e dificulta a percepção da trajetória individual do estudante.",
+        "gabarito": "ERRADA",
+        "justificativa": "..."
+      }
+    ]
+  }

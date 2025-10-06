@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminEditUser from './AdminEditUser'
-import ConfirmDialog from './ConfirmDialog'
+import { ConfirmDialog } from './ConfirmDialog'
 
 interface Profile {
   id: string
@@ -214,10 +214,15 @@ export default function AdminUserList({ profiles }: AdminUserListProps) {
 
       {showConfirmDialog && (
         <ConfirmDialog
+          open={showConfirmDialog.show}
+          onOpenChange={(open) => {
+            if (!open) setShowConfirmDialog(null)
+          }}
           title={showConfirmDialog.title}
-          message={showConfirmDialog.message}
+          description={showConfirmDialog.message}
           onConfirm={showConfirmDialog.onConfirm}
           onCancel={() => setShowConfirmDialog(null)}
+          loading={!!loading}
         />
       )}
     </>

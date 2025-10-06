@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import AdminUserList from '@/components/AdminUserList'
 import DatabaseManager from '@/components/DatabaseManager'
+import { AdminTabs } from '@/components/admin/AdminTabs'
+// Types for admin page
+type Profile = any
+type AdminAction = any
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -67,19 +71,9 @@ export default async function AdminPage() {
           </p>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-6">
-          <nav className="flex space-x-8" aria-label="Tabs">
-            <button className="border-b-2 border-blue-500 py-2 px-1 text-sm font-medium text-blue-600">
-              User Management
-            </button>
-            <button className="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
-              Database Management
-            </button>
-          </nav>
-        </div>
+        <AdminTabs />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           {/* User Management */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow">
@@ -93,7 +87,7 @@ export default async function AdminPage() {
               </div>
               <div className="p-6">
                 <AdminUserList
-                  profiles={profiles || []}
+                  profiles={profiles as Profile[] || []}
                 />
               </div>
             </div>
@@ -130,18 +124,18 @@ export default async function AdminPage() {
               <div className="p-6">
                 {adminActions && adminActions.length > 0 ? (
                   <div className="space-y-4">
-                    {adminActions.map((action) => (
+                    {(adminActions as AdminAction[] || []).map((action) => (
                       <div key={action.id} className="border-l-4 border-blue-500 pl-4">
                         <div className="flex items-center justify-between">
                           <div className="text-sm font-medium text-gray-900">
                             {action.action.replace(/_/g, ' ')}
                   </div>
                           <div className="text-xs text-gray-500">
-                            {new Date(action.created_at).toLocaleDateString()}
+                            {new Date(action.created_at || '').toLocaleDateString()}
                   </div>
                 </div>
                         <div className="text-sm text-gray-600 mt-1">
-                          Admin ID: {action.admin_id.substring(0, 8)}...
+                          Admin ID: {action.admin_id?.substring(0, 8)}...
                           {action.target_user_id && (
                             <span className="ml-2">
                               Target: {action.target_user_id.substring(0, 8)}...

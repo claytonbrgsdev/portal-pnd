@@ -75,3 +75,8 @@ SELECT
 FROM profiles
 WHERE id = auth.uid()
 LIMIT 1;
+
+
+
+
+

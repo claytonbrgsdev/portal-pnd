@@ -61,3 +61,8 @@ Once the test tables are working, you can:
 - Build your application features
 
 The transaction pooler is optimized for serverless applications and provides excellent performance for your Next.js app!
+
+
+
+
+

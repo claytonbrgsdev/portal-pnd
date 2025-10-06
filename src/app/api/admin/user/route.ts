@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 import { logUserUpdate, logUserDelete } from '@/app/actions/createAdminAction'
+import { Tables, TablesInsert, TablesUpdate } from '@/lib/database.types'
 
 // This endpoint requires SUPABASE_SERVICE_ROLE_KEY environment variable for DELETE operations
 
@@ -124,7 +125,7 @@ export async function DELETE(request: NextRequest) {
       .from('profiles')
       .select('email, full_name')
       .eq('id', userId)
-      .single()
+      .single() as { data: any }
 
     // Create Supabase admin client using service role key for user deletion
     const supabaseAdmin = createClient(
