@@ -37,3 +37,35 @@ export const supabaseAdmin = createClient<Database>(
     }
   }
 );
+
+/**
+ * Upload a question image to Supabase Storage and return its public URL.
+ * Requires a public bucket named `questions-images` configured in Supabase.
+ * Note: call this from client-side code only.
+ */
+export async function uploadQuestionImage(file: File): Promise<string> {
+  const bucket = 'questions-images';
+  const ext = (file.name?.split('.')?.pop() || 'bin').toLowerCase();
+  const unique = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? (crypto as unknown as { randomUUID: () => string }).randomUUID()
+    : Math.random().toString(36).slice(2);
+  const path = `${Date.now()}-${unique}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, {
+      upsert: false,
+      cacheControl: '3600',
+      contentType: file.type || undefined,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message || 'Falha ao fazer upload da imagem');
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  if (!data?.publicUrl) {
+    throw new Error('Não foi possível obter a URL pública da imagem');
+  }
+  return data.publicUrl;
+}

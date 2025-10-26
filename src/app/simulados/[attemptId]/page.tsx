@@ -13,6 +13,7 @@ type Question = {
   alt_c_text: string
   alt_d_text: string
   correct_letter: 'A'|'B'|'C'|'D'
+  image_url?: string | null
 }
 
 export default function SimuladoRunnerPage() {
@@ -37,7 +38,8 @@ export default function SimuladoRunnerPage() {
         alt_b_text: q.alt_b_text,
         alt_c_text: q.alt_c_text,
         alt_d_text: q.alt_d_text,
-        correct_letter: q.correct_letter
+        correct_letter: q.correct_letter,
+        image_url: q.image_url || null,
       }))
       setQuestions(qs)
     }
@@ -89,6 +91,12 @@ export default function SimuladoRunnerPage() {
                 }
                 return (
                   <div key={q.id} className="border rounded p-4">
+                    {q.image_url && (
+                      <div className="mb-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={q.image_url} alt="Imagem da questão" className="max-h-48 rounded border" />
+                      </div>
+                    )}
                     <div className="font-medium mb-2">{q.prompt}</div>
                     <div className="text-sm">
                       <div className={isCorrect ? 'text-green-700' : 'text-red-700'}>
@@ -121,6 +129,12 @@ export default function SimuladoRunnerPage() {
           </div>
           {current ? (
             <div>
+              {current.image_url && (
+                <div className="mb-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={current.image_url} alt="Imagem da questão" className="max-h-64 rounded border" />
+                </div>
+              )}
               <div className="mb-4 text-lg">{current.prompt}</div>
               <div className="space-y-2">
                 {(['A','B','C','D'] as const).map((letter) => (
@@ -147,5 +161,3 @@ export default function SimuladoRunnerPage() {
     </ProtectedRoute>
   )
 }
-
-

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Eye, FileText, HelpCircle } from 'lucide-react';
+import { uploadQuestionImage } from '@/lib/supabase';
 
 // Question Details Modal Component
 function QuestionDetailsModal({
@@ -43,6 +44,16 @@ function QuestionDetailsModal({
           </div>
 
           <div className="space-y-6">
+            {/* Image preview */}
+            {question.image_url && (
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Imagem</Label>
+                <div className="mt-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={question.image_url as string} alt="Imagem da questão" className="max-h-64 rounded border" />
+                </div>
+              </div>
+            )}
             {/* Basic Information */}
             <div className="grid grid-cols-2 gap-6">
               <div>
@@ -226,16 +237,27 @@ function CreateQuestionForm({
     text2_title: '',
     year: new Date().getFullYear(),
   });
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const questionData = {
+    const questionData: Record<string, unknown> = {
       ...formData,
       id: crypto.randomUUID(),
     };
 
-    await onSubmit(questionData);
+    try {
+      if (imageFile) {
+        const url = await uploadQuestionImage(imageFile);
+        questionData.image_url = url;
+      }
+    } catch (err) {
+      console.error('Erro ao enviar imagem:', err);
+    }
+
+    await onSubmit(questionData as TablesInsert<'questions'>);
   };
 
   return (
@@ -312,6 +334,32 @@ function CreateQuestionForm({
               onChange={(e) => setFormData({ ...formData, natural_key: e.target.value })}
               placeholder="Identificador único da questão"
             />
+          </div>
+          <div className="col-span-2">
+            <Label htmlFor="image">Imagem (opcional)</Label>
+            <input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0] || null;
+                setImageFile(f);
+                if (f) {
+                  const reader = new FileReader();
+                  reader.onload = () => setImagePreview(reader.result as string);
+                  reader.readAsDataURL(f);
+                } else {
+                  setImagePreview(null);
+                }
+              }}
+              className="block mt-1"
+            />
+            {imagePreview && (
+              <div className="mt-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imagePreview} alt="Prévia" className="max-h-40 rounded border" />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -457,10 +505,22 @@ function EditQuestionForm({
     text2_title: record.text2_title,
     year: record.year,
   });
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(formData);
+    const updates: Record<string, unknown> = { ...formData };
+    try {
+      if (imageFile) {
+        const url = await uploadQuestionImage(imageFile);
+        updates.image_url = url;
+      }
+    } catch (err) {
+      console.error('Erro ao enviar imagem:', err);
+    }
+
+    await onSubmit(updates as TablesUpdate<'questions'>);
   };
 
   return (
@@ -492,6 +552,39 @@ function EditQuestionForm({
         </div>
       </div>
 
+      {/* Image */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <Label>Imagem</Label>
+          <div className="mt-2">
+            {record.image_url && !imagePreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={record.image_url as string} alt="Imagem atual" className="max-h-40 rounded border mb-2" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0] || null;
+                setImageFile(f);
+                if (f) {
+                  const reader = new FileReader();
+                  reader.onload = () => setImagePreview(reader.result as string);
+                  reader.readAsDataURL(f);
+                } else {
+                  setImagePreview(null);
+                }
+              }}
+              className="block"
+            />
+            {imagePreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imagePreview} alt="Prévia" className="max-h-40 rounded border mt-2" />
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
@@ -506,6 +599,18 @@ function EditQuestionForm({
 
 // Column configuration for questions table
 const questionColumns = [
+  {
+    key: 'image_url',
+    label: 'Imagem',
+    render: (value: string) => (
+      value ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={value} alt="miniatura" className="h-12 w-12 object-cover rounded border" />
+      ) : (
+        <span className="text-gray-400 text-sm">—</span>
+      )
+    ),
+  },
   {
     key: 'id',
     label: 'ID',
