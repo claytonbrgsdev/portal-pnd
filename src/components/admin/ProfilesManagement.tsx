@@ -100,7 +100,7 @@ function ProfileDetailsModal({
               <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                 <div>
                   <strong>Criado em:</strong><br />
-                  {new Date(String(profile.created_at) || '').toLocaleString('pt-BR')}
+                  {profile.created_at ? new Date(String(profile.created_at)).toLocaleString('pt-BR') : '—'}
                 </div>
                 <div>
                   <strong>Última atualização:</strong><br />
@@ -321,7 +321,7 @@ const profileColumns: ColumnConfig[] = [
     label: 'Criado em',
     render: (value: unknown) => (
       <div className="text-xs text-gray-600">
-        {new Date(String(value)).toLocaleDateString('pt-BR')}
+        {value ? new Date(String(value)).toLocaleDateString('pt-BR') : '—'}
       </div>
     ),
   },

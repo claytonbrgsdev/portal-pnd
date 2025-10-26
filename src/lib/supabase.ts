@@ -45,11 +45,9 @@ export const supabaseAdmin = createClient<Database>(
  */
 export async function uploadQuestionImage(file: File): Promise<string> {
   const bucket = 'questions-images';
-  const ext = (file.name?.split('.')?.pop() || 'bin').toLowerCase();
-  const unique = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? (crypto as unknown as { randomUUID: () => string }).randomUUID()
-    : Math.random().toString(36).slice(2);
-  const path = `${Date.now()}-${unique}.${ext}`;
+  // Path solicitado: questions/<timestamp>-<file.name>
+  const safeName = file.name?.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '') || 'image.bin';
+  const path = `questions/${Date.now()}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from(bucket)

@@ -206,7 +206,7 @@ function QuestionDetailsModal({
             {/* Metadata */}
             <div className="pt-4 border-t">
               <div className="text-xs text-gray-500">
-                Criado em: {new Date(String(questionRecord.created_at) || '').toLocaleString('pt-BR')}
+                Criado em: {questionRecord.created_at ? new Date(String(questionRecord.created_at)).toLocaleString('pt-BR') : '—'}
               </div>
             </div>
           </div>
@@ -270,6 +270,9 @@ function CreateQuestionForm({
     }
 
     await onSubmit(questionData);
+    // limpar estado local de imagem após salvar
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   return (
@@ -536,6 +539,8 @@ function EditQuestionForm({
     }
 
     await onSubmit(updates);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   return (
@@ -736,7 +741,9 @@ const questionColumns: ColumnConfig[] = [
   {
     key: 'created_at',
     label: 'Criado em',
-    render: (value: unknown) => new Date(String(value)).toLocaleDateString('pt-BR'),
+    render: (value: unknown) => (
+      value ? new Date(String(value)).toLocaleDateString('pt-BR') : '—'
+    ),
   },
 ];
 

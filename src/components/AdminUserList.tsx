@@ -165,7 +165,7 @@ export default function AdminUserList({ profiles }: AdminUserListProps) {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">{profile.email}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Created: {new Date(profile.created_at).toLocaleDateString()}
+                    Criado em: {profile.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR') : '—'}
                   </p>
                 </div>
 

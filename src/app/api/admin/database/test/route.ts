@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server'
 
-// Static export compatibility: this route is fully static
-export const dynamic = 'force-static'
-export const revalidate = false
-
 export async function GET() {
   return NextResponse.json({
     message: 'Database API is working',
@@ -15,7 +11,6 @@ export async function GET() {
     ]
   })
 }
-
 
 
 
