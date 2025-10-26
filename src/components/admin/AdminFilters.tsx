@@ -19,17 +19,17 @@ export interface FilterOption {
 
 interface AdminFiltersProps {
   filters: FilterOption[]
-  onFiltersChange: (filters: Record<string, any>) => void
+  onFiltersChange: (filters: Record<string, unknown>) => void
   onReset: () => void
 }
 
 export function AdminFilters({ filters, onFiltersChange, onReset }: AdminFiltersProps) {
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
+  const [activeFilters, setActiveFilters] = useState<Record<string, unknown>>({})
   const [showFilters, setShowFilters] = useState(false)
 
   // Notify parent component only on explicit user actions to avoid mount loops
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     const newFilters = { ...activeFilters }
 
     if (value === '' || value === null || value === undefined) {
@@ -89,14 +89,14 @@ export function AdminFilters({ filters, onFiltersChange, onReset }: AdminFilters
                 {filter.type === 'text' && (
                   <Input
                     placeholder={filter.placeholder || `Digite ${filter.label.toLowerCase()}...`}
-                    value={activeFilters[filter.key] || ''}
+                    value={String(activeFilters[filter.key] || '')}
                     onChange={(e) => handleFilterChange(filter.key, e.target.value)}
                   />
                 )}
 
                 {filter.type === 'select' && filter.options && (
                   <Select
-                    value={activeFilters[filter.key] || 'all'}
+                    value={String(activeFilters[filter.key] || 'all')}
                     onValueChange={(value) => handleFilterChange(filter.key, value === 'all' ? '' : value)}
                   >
                     <SelectTrigger>
@@ -117,7 +117,7 @@ export function AdminFilters({ filters, onFiltersChange, onReset }: AdminFilters
                   <Input
                     type="number"
                     placeholder={filter.placeholder || `Digite ${filter.label.toLowerCase()}...`}
-                    value={activeFilters[filter.key] || ''}
+                    value={String(activeFilters[filter.key] || '')}
                     onChange={(e) => handleFilterChange(filter.key, e.target.value ? Number(e.target.value) : '')}
                   />
                 )}
@@ -125,7 +125,7 @@ export function AdminFilters({ filters, onFiltersChange, onReset }: AdminFilters
                 {filter.type === 'date' && (
                   <Input
                     type="date"
-                    value={activeFilters[filter.key] || ''}
+                    value={String(activeFilters[filter.key] || '')}
                     onChange={(e) => handleFilterChange(filter.key, e.target.value)}
                   />
                 )}

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 export default function QuestionsImport() {
   const [jsonText, setJsonText] = useState('')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<unknown>(null)
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
 
   const handleFile = async (file: File) => {
     const text = await file.text()

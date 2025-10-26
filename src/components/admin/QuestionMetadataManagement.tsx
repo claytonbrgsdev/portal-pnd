@@ -3,13 +3,21 @@
 import React, { useMemo, useState } from 'react';
 import { AdminCRUDTable } from './AdminCRUDTable';
 import { adminCRUD } from '@/lib/supabase-admin';
-import { Tables, TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Eye, BookOpen, Target, Lightbulb } from 'lucide-react';
+import { FilterOption } from './AdminFilters';
+
+interface ColumnConfig {
+  key: string;
+  label: string;
+  render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode;
+  sortable?: boolean;
+  filterable?: boolean;
+}
 
 // Question Metadata Details Modal Component
 function QuestionMetadataDetailsModal({
@@ -17,11 +25,16 @@ function QuestionMetadataDetailsModal({
   open,
   onOpenChange,
 }: {
-  metadata: Tables<'question_metadata'> | null;
+  metadata: Record<string, unknown> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   if (!metadata || !open) return null;
+
+  const hasCompetencyDesc = metadata.competency_desc && String(metadata.competency_desc) !== 'undefined' && String(metadata.competency_desc) !== '';
+  const hasSkillDesc = metadata.skill_desc && String(metadata.skill_desc) !== 'undefined' && String(metadata.skill_desc) !== '';
+  const hasExtraInfo = metadata.extra_info && String(metadata.extra_info) !== 'undefined' && String(metadata.extra_info) !== '';
+  const hasKnowledgeObjects = metadata.knowledge_objects;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -40,14 +53,14 @@ function QuestionMetadataDetailsModal({
               <div>
                 <Label className="text-sm font-medium text-gray-700">ID da Questão</Label>
                 <div className="mt-1 p-2 bg-gray-50 rounded-md">
-                  <code className="text-sm">{metadata.question_id}</code>
+                  <code className="text-sm">{String(metadata.question_id)}</code>
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Código da Habilidade</Label>
                 <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                  {metadata.skill_code ? (
-                    <Badge variant="outline">{metadata.skill_code}</Badge>
+                  {String(metadata.skill_code || '') ? (
+                    <Badge variant="outline">{String(metadata.skill_code)}</Badge>
                   ) : (
                     <span className="text-gray-400">Não definido</span>
                   )}
@@ -56,33 +69,33 @@ function QuestionMetadataDetailsModal({
             </div>
 
             {/* Competency Description */}
-            {metadata.competency_desc && (
+            {Boolean(hasCompetencyDesc) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Target className="h-4 w-4" />
                   Descrição da Competência
                 </Label>
                 <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-gray-800 leading-relaxed">{metadata.competency_desc}</p>
+                  <p className="text-gray-800 leading-relaxed">{String(metadata.competency_desc)}</p>
                 </div>
               </div>
             )}
 
             {/* Skill Description */}
-            {metadata.skill_desc && (
+            {Boolean(hasSkillDesc) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
                   Descrição da Habilidade
                 </Label>
                 <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-gray-800 leading-relaxed">{metadata.skill_desc}</p>
+                  <p className="text-gray-800 leading-relaxed">{String(metadata.skill_desc)}</p>
                 </div>
               </div>
             )}
 
             {/* Knowledge Objects */}
-            {metadata.knowledge_objects && (
+            {Boolean(hasKnowledgeObjects) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Lightbulb className="h-4 w-4" />
@@ -97,11 +110,11 @@ function QuestionMetadataDetailsModal({
             )}
 
             {/* Extra Information */}
-            {metadata.extra_info && (
+            {Boolean(hasExtraInfo) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700">Informações Extras</Label>
                 <div className="mt-2 p-4 bg-gray-50 border border-gray-200 rounded-md">
-                  <p className="text-gray-800 leading-relaxed">{metadata.extra_info}</p>
+                  <p className="text-gray-800 leading-relaxed">{String(metadata.extra_info)}</p>
                 </div>
               </div>
             )}
@@ -124,10 +137,10 @@ function CreateQuestionMetadataForm({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (data: TablesInsert<'question_metadata'>) => Promise<void>;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [formData, setFormData] = React.useState<TablesInsert<'question_metadata'>>({
+  const [formData, setFormData] = React.useState<Record<string, unknown>>({
     question_id: '',
     competency_desc: '',
     extra_info: '',
@@ -148,7 +161,7 @@ function CreateQuestionMetadataForm({
           <Label htmlFor="question_id">ID da Questão</Label>
           <Input
             id="question_id"
-            value={formData.question_id}
+            value={String(formData.question_id || '')}
             onChange={(e) => setFormData({ ...formData, question_id: e.target.value })}
             placeholder="ID da questão relacionada"
             required
@@ -159,7 +172,7 @@ function CreateQuestionMetadataForm({
           <Label htmlFor="competency_desc">Descrição da Competência</Label>
           <Textarea
             id="competency_desc"
-            value={formData.competency_desc || ''}
+            value={String(formData.competency_desc) || ''}
             onChange={(e) => setFormData({ ...formData, competency_desc: e.target.value })}
             placeholder="Descrição da competência avaliada..."
             rows={2}
@@ -170,7 +183,7 @@ function CreateQuestionMetadataForm({
           <Label htmlFor="skill_code">Código da Habilidade</Label>
           <Input
             id="skill_code"
-            value={formData.skill_code || ''}
+            value={String(formData.skill_code) || ''}
             onChange={(e) => setFormData({ ...formData, skill_code: e.target.value })}
             placeholder="Código da habilidade (ex: H1, H2...)"
           />
@@ -180,7 +193,7 @@ function CreateQuestionMetadataForm({
           <Label htmlFor="skill_desc">Descrição da Habilidade</Label>
           <Textarea
             id="skill_desc"
-            value={formData.skill_desc || ''}
+            value={String(formData.skill_desc) || ''}
             onChange={(e) => setFormData({ ...formData, skill_desc: e.target.value })}
             placeholder="Descrição detalhada da habilidade..."
             rows={2}
@@ -191,7 +204,7 @@ function CreateQuestionMetadataForm({
           <Label htmlFor="extra_info">Informações Extras</Label>
           <Textarea
             id="extra_info"
-            value={formData.extra_info || ''}
+            value={String(formData.extra_info) || ''}
             onChange={(e) => setFormData({ ...formData, extra_info: e.target.value })}
             placeholder="Informações adicionais..."
             rows={2}
@@ -217,16 +230,16 @@ function EditQuestionMetadataForm({
   onSubmit,
   onCancel,
 }: {
-  record: Tables<'question_metadata'>;
-  onSubmit: (data: TablesUpdate<'question_metadata'>) => Promise<void>;
+  record: Record<string, unknown>;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [formData, setFormData] = React.useState<TablesUpdate<'question_metadata'>>({
-    competency_desc: record.competency_desc,
-    extra_info: record.extra_info,
+  const [formData, setFormData] = React.useState<Record<string, unknown>>({
+    competency_desc: String(record.competency_desc || ''),
+    extra_info: String(record.extra_info || ''),
     knowledge_objects: record.knowledge_objects,
-    skill_code: record.skill_code,
-    skill_desc: record.skill_desc,
+    skill_code: String(record.skill_code || ''),
+    skill_desc: String(record.skill_desc || ''),
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -241,7 +254,7 @@ function EditQuestionMetadataForm({
           <Label htmlFor="question_id">ID da Questão</Label>
           <Input
             id="question_id"
-            value={record.question_id}
+            value={String(record.question_id || '')}
             disabled
             className="bg-gray-50"
           />
@@ -252,7 +265,7 @@ function EditQuestionMetadataForm({
           <Label htmlFor="competency_desc">Descrição da Competência</Label>
           <Textarea
             id="competency_desc"
-            value={formData.competency_desc || ''}
+            value={String(formData.competency_desc) || ''}
             onChange={(e) => setFormData({ ...formData, competency_desc: e.target.value })}
             rows={2}
           />
@@ -262,7 +275,7 @@ function EditQuestionMetadataForm({
           <Label htmlFor="skill_code">Código da Habilidade</Label>
           <Input
             id="skill_code"
-            value={formData.skill_code || ''}
+            value={String(formData.skill_code) || ''}
             onChange={(e) => setFormData({ ...formData, skill_code: e.target.value })}
           />
         </div>
@@ -271,7 +284,7 @@ function EditQuestionMetadataForm({
           <Label htmlFor="skill_desc">Descrição da Habilidade</Label>
           <Textarea
             id="skill_desc"
-            value={formData.skill_desc || ''}
+            value={String(formData.skill_desc) || ''}
             onChange={(e) => setFormData({ ...formData, skill_desc: e.target.value })}
             rows={2}
           />
@@ -281,7 +294,7 @@ function EditQuestionMetadataForm({
           <Label htmlFor="extra_info">Informações Extras</Label>
           <Textarea
             id="extra_info"
-            value={formData.extra_info || ''}
+            value={String(formData.extra_info) || ''}
             onChange={(e) => setFormData({ ...formData, extra_info: e.target.value })}
             rows={2}
           />
@@ -301,32 +314,33 @@ function EditQuestionMetadataForm({
 }
 
 // Column configuration for question_metadata table
-const questionMetadataColumns = [
+const questionMetadataColumns: ColumnConfig[] = [
   {
     key: 'question_id',
     label: 'ID da Questão',
-    render: (value: string) => (
+    render: (value: unknown) => (
       <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-        {value?.substring(0, 8)}...
+        {String(value)?.substring(0, 8)}...
       </code>
     ),
   },
   {
     key: 'competency_desc',
     label: 'Competência',
-    render: (value: string) => {
-      if (!value) {
+    render: (value: unknown) => {
+      const stringValue = String(value || '');
+      if (!stringValue) {
         return <span className="text-gray-400 text-sm">Não definida</span>;
       }
 
-      const preview = value.length > 60 ? `${value.substring(0, 60)}...` : value;
+      const preview = stringValue.length > 60 ? `${stringValue.substring(0, 60)}...` : stringValue;
 
       return (
         <div className="space-y-1">
-          <div className="text-sm leading-tight" title={value}>
+          <div className="text-sm leading-tight" title={stringValue}>
             {preview}
           </div>
-          {value.length > 60 && (
+          {stringValue.length > 60 && (
             <div className="text-xs text-gray-500">
               Clique em &ldquo;Ver Detalhes&rdquo; para ver completo
             </div>
@@ -338,10 +352,10 @@ const questionMetadataColumns = [
   {
     key: 'skill_code',
     label: 'Código Habilidade',
-    render: (value: string) => (
+    render: (value: unknown) => (
       <div className="text-sm">
-        {value ? (
-          <Badge variant="outline">{value}</Badge>
+        {String(value) ? (
+          <Badge variant="outline">{String(value)}</Badge>
         ) : (
           <span className="text-gray-400 text-sm">N/A</span>
         )}
@@ -351,19 +365,20 @@ const questionMetadataColumns = [
   {
     key: 'skill_desc',
     label: 'Habilidade',
-    render: (value: string) => {
-      if (!value) {
+    render: (value: unknown) => {
+      const stringValue = String(value || '');
+      if (!stringValue) {
         return <span className="text-gray-400 text-sm">Não definida</span>;
       }
 
-      const preview = value.length > 60 ? `${value.substring(0, 60)}...` : value;
+      const preview = stringValue.length > 60 ? `${stringValue.substring(0, 60)}...` : stringValue;
 
       return (
         <div className="space-y-1">
-          <div className="text-sm leading-tight" title={value}>
+          <div className="text-sm leading-tight" title={stringValue}>
             {preview}
           </div>
-          {value.length > 60 && (
+          {stringValue.length > 60 && (
             <div className="text-xs text-gray-500">
               Clique em &ldquo;Ver Detalhes&rdquo; para ver completo
             </div>
@@ -399,7 +414,7 @@ const metadataFilters: FilterOption[] = [
 export function QuestionMetadataManagement() {
   const crud = useMemo(() => adminCRUD.question_metadata(), []);
   const searchFields = useMemo(() => ['question_id', 'competency_desc', 'skill_code'], []);
-  const [viewingMetadata, setViewingMetadata] = useState<Tables<'question_metadata'> | null>(null);
+  const [viewingMetadata, setViewingMetadata] = useState<Record<string, unknown> | null>(null);
 
   return (
     <>
@@ -412,7 +427,7 @@ export function QuestionMetadataManagement() {
           {
             key: 'actions',
             label: 'Visualizar',
-            render: (value: any, record: Tables<'question_metadata'>) => (
+            render: (value: unknown, record: Record<string, unknown>) => (
               <Button
                 variant="outline"
                 size="sm"

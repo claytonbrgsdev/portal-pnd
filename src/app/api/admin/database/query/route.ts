@@ -4,7 +4,6 @@ import { createClient as createServerClient } from '@/utils/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const tableName = 'query' // For logging purposes
     const supabase = await createServerClient()
 
     // Check if user is authenticated and is admin
@@ -126,7 +125,8 @@ export async function POST(request: NextRequest) {
     ]
 
     // Log the admin action
-    await supabase.from('admin_actions').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('admin_actions').insert({
       admin_id: session.user.id,
       action: 'database_query_execute',
       payload: {

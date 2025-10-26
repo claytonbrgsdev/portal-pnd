@@ -31,15 +31,15 @@ export default function SimuladoRunnerPage() {
     const load = async () => {
       const res = await fetch('/api/admin/database/data/questions?page=1&limit=20')
       const json = await res.json()
-      const qs: Question[] = (json?.data || []).map((q: any) => ({
-        id: q.id,
-        prompt: q.prompt,
-        alt_a_text: q.alt_a_text,
-        alt_b_text: q.alt_b_text,
-        alt_c_text: q.alt_c_text,
-        alt_d_text: q.alt_d_text,
-        correct_letter: q.correct_letter,
-        image_url: q.image_url || null,
+      const qs: Question[] = (json?.data || []).map((q: Record<string, unknown>) => ({
+        id: String(q.id),
+        prompt: String(q.prompt),
+        alt_a_text: String(q.alt_a_text),
+        alt_b_text: String(q.alt_b_text),
+        alt_c_text: String(q.alt_c_text),
+        alt_d_text: String(q.alt_d_text),
+        correct_letter: String(q.correct_letter) as 'A'|'B'|'C'|'D',
+        image_url: q.image_url ? String(q.image_url) : null,
       }))
       setQuestions(qs)
     }

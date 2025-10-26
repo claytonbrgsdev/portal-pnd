@@ -25,10 +25,11 @@ export async function createAdminAction(data: AdminActionData) {
   }
 
   // Log the admin action
-  const { error } = await supabase.from('admin_actions').insert({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('admin_actions').insert({
     admin_id: session.user.id,
     action: data.action,
-    target_user_id: data.targetUserId,
+    target_user_id: data.targetUserId || null,
     payload: data.payload || {}
   })
 

@@ -8,7 +8,8 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('simulado_attempts')
       .update({ finished_at: new Date().toISOString() })
       .eq('id', id)

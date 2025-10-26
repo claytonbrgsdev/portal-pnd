@@ -30,7 +30,7 @@ export function AdminActionsViewer() {
     setError(null);
 
     try {
-      const filters: Record<string, any> = {};
+      const filters: Record<string, unknown> = {};
 
       if (searchTerm) {
         filters.action = searchTerm;
@@ -46,9 +46,10 @@ export function AdminActionsViewer() {
       if (error) {
         setError(error.message || 'Erro ao carregar ações administrativas');
       } else {
-        setData(result || []);
+        setData((result || []) as unknown as AdminAction[]);
       }
     } catch (err) {
+      console.error('Error loading admin actions:', err);
       setError('Erro inesperado ao carregar dados');
     } finally {
       setLoading(false);
@@ -73,6 +74,7 @@ export function AdminActionsViewer() {
         await loadData();
       }
     } catch (err) {
+      console.error('Error deleting admin action:', err);
       setError('Erro inesperado ao excluir registro');
     }
   };

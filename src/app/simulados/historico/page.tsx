@@ -26,7 +26,7 @@ export default function HistoricoSimuladosPage() {
             <div>Nenhum simulado encontrado.</div>
           ) : (
             <div className="space-y-3">
-              {attempts.map((a: any) => (
+              {attempts.map((a: Attempt) => (
                 <div key={a.id} className="border rounded p-4 flex justify-between">
                   <div>
                     <div className="font-medium">{new Date(a.started_at).toLocaleString('pt-BR')}</div>

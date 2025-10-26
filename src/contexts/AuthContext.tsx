@@ -3,8 +3,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
+import { Tables } from '@/lib/database.types';
 
-type UserProfile = any;
+type UserProfile = Tables<'profiles'>;
 
 type AuthContextType = {
   user: User | null;
@@ -30,13 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // First check profile table
-      const { data: profileData, error: profileError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profileData, error: profileError } = await (supabase as any)
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (!profileError && (profileData as any)?.role === 'admin') {
+      if (!profileError && (profileData as Tables<'profiles'>)?.role === 'admin') {
         return true;
       }
 
@@ -76,7 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           console.log('Auth user found:', authUser.user.email);
 
-          const { data, error } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data, error } = await (supabase as any)
             .from('profiles')
             .insert([
               {
@@ -124,7 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }), 5000);
       });
 
-      const fetchPromise = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fetchPromise = (supabase as any)
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -169,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data) {
         console.log('Profile loaded successfully:', data);
-        setProfile(data);
+        setProfile(data as UserProfile);
       } else {
         console.log('No profile data returned');
       }
@@ -261,7 +265,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Create profile if user was created
       if (data.user) {
-        const { error: profileError } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: profileError } = await (supabase as any)
           .from('profiles')
           .insert([
             {

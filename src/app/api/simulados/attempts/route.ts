@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 
 export async function POST() {
@@ -7,7 +7,8 @@ export async function POST() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('simulado_attempts')
       .insert({ user_id: session.user.id, total_questions: 0, correct_answers: 0 })
       .select('id, started_at')

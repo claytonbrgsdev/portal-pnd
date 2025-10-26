@@ -1,22 +1,17 @@
 import type { NextConfig } from "next";
 
-// Use basePath only in production (GitHub Pages)
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
-  // Removed static export to support dynamic features like cookies/auth
-  // output: 'export', // Commented out to enable dynamic rendering
+  // Removido output: 'export' para permitir rotas dinâmicas (API) no build serverful
   trailingSlash: true,
-  ...(isProd && {
-    basePath: '/portal-pnd',
-    assetPrefix: '/portal-pnd/',
-  }),
+  // Se for publicar sob um subpath específico, mantenha basePath/assetPrefix.
+  // Caso contrário, defina variáveis de ambiente ou ajuste para strings vazias.
+  basePath: isProd ? "/portal-pnd" : "",
+  assetPrefix: isProd ? "/portal-pnd/" : "",
   images: {
-    unoptimized: true
+    unoptimized: true,
   },
-  // Silence the workspace root warning
-  outputFileTracingRoot: undefined,
-  // Configure for dynamic rendering
   experimental: {
     esmExternals: true,
   },

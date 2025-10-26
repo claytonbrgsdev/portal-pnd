@@ -84,7 +84,6 @@ export async function GET(
     }
 
     // Ordering
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (orderBy) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       query = (query as any).order(orderBy, { ascending })
@@ -196,7 +195,8 @@ export async function PUT(
     }
 
     // Log the admin action
-    await supabase.from('admin_actions').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('admin_actions').insert({
       admin_id: session.user.id,
       action: 'database_data_update',
       payload: {
@@ -293,7 +293,8 @@ export async function DELETE(
     }
 
     // Log the admin action
-    await supabase.from('admin_actions').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('admin_actions').insert({
       admin_id: session.user.id,
       action: 'database_data_delete',
       payload: {
@@ -388,7 +389,8 @@ export async function POST(
     }
 
     // Log the admin action
-    await supabase.from('admin_actions').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('admin_actions').insert({
       admin_id: session.user.id,
       action: 'database_data_insert',
       payload: {

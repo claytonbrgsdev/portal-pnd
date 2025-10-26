@@ -1,5 +1,6 @@
 'use client'
 
+
 // Minimal client for Admin CRUD operations via internal Next.js API routes.
 
 export interface GetAllOptions {
@@ -11,7 +12,7 @@ export interface GetAllOptions {
 }
 
 export interface CrudResponse<T> {
-  data?: T[]
+  data?: T
   error?: { message: string; details?: string }
 }
 
@@ -19,18 +20,18 @@ export interface MutationResponse {
   error?: { message: string; details?: string }
 }
 
-export interface SupabaseAdminCRUD<TTableName extends string> {
-  getAll(options?: GetAllOptions): Promise<CrudResponse<Record<string, unknown>>>;
+export interface SupabaseAdminCRUD {
+  getAll(options?: GetAllOptions): Promise<CrudResponse<unknown[]>>;
   create(row: Record<string, unknown>): Promise<MutationResponse>;
   update(id: string, updates: Record<string, unknown>): Promise<MutationResponse>;
   delete(id: string): Promise<MutationResponse>;
 }
 
-function createCrud<TTableName extends string>(tableName: TTableName): SupabaseAdminCRUD<TTableName> {
+function createCrud(tableName: string): SupabaseAdminCRUD {
   const baseUrl = `/api/admin/database/data/${tableName}`
 
   return {
-    async getAll(options?: GetAllOptions): Promise<CrudResponse<Record<string, unknown>>> {
+    async getAll(options?: GetAllOptions): Promise<CrudResponse<unknown[]>> {
       const page = options?.page ?? 1
       const limit = options?.limit ?? 50
       const filters = options?.filters ?? {}
@@ -60,7 +61,7 @@ function createCrud<TTableName extends string>(tableName: TTableName): SupabaseA
       }
 
       const json = await res.json()
-      return { data: json.data as Record<string, unknown>[] }
+      return { data: json.data as unknown[] }
     },
 
     async create(row: Record<string, unknown>): Promise<MutationResponse> {
@@ -128,5 +129,4 @@ export const adminCRUD = {
   profiles: () => createCrud('profiles'),
   admin_actions: () => createCrud('admin_actions'),
 }
-
 

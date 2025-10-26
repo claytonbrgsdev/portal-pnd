@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from 'react';
 import { AdminCRUDTable } from './AdminCRUDTable';
 import { adminCRUD } from '@/lib/supabase-admin';
-import { Tables, TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +11,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Eye, FileText, HelpCircle } from 'lucide-react';
 import { uploadQuestionImage } from '@/lib/supabase';
+import { FilterOption } from './AdminFilters';
+
+interface ColumnConfig {
+  key: string;
+  label: string;
+  render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode;
+  sortable?: boolean;
+  filterable?: boolean;
+}
 
 // Question Details Modal Component
 function QuestionDetailsModal({
@@ -19,17 +27,18 @@ function QuestionDetailsModal({
   open,
   onOpenChange,
 }: {
-  question: Tables<'questions'> | null;
+  question: Record<string, unknown> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   if (!question || !open) return null;
 
+  const questionRecord = question as Record<string, unknown>;
   const alternatives = [
-    { letter: 'A', text: question.alt_a_text, justification: question.alt_a_justification },
-    { letter: 'B', text: question.alt_b_text, justification: question.alt_b_justification },
-    { letter: 'C', text: question.alt_c_text, justification: question.alt_c_justification },
-    { letter: 'D', text: question.alt_d_text, justification: question.alt_d_justification },
+    { letter: 'A', text: String(questionRecord.alt_a_text || ''), justification: String(questionRecord.alt_a_justification || '') },
+    { letter: 'B', text: String(questionRecord.alt_b_text || ''), justification: String(questionRecord.alt_b_justification || '') },
+    { letter: 'C', text: String(questionRecord.alt_c_text || ''), justification: String(questionRecord.alt_c_justification || '') },
+    { letter: 'D', text: String(questionRecord.alt_d_text || ''), justification: String(questionRecord.alt_d_justification || '') },
   ].filter(alt => alt.text);
 
   return (
@@ -45,12 +54,12 @@ function QuestionDetailsModal({
 
           <div className="space-y-6">
             {/* Image preview */}
-            {question.image_url && (
+            {Boolean(questionRecord.image_url) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700">Imagem</Label>
                 <div className="mt-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={question.image_url as string} alt="Imagem da questão" className="max-h-64 rounded border" />
+                  <img src={String(questionRecord.image_url) || ''} alt="Imagem da questão" className="max-h-64 rounded border" />
                 </div>
               </div>
             )}
@@ -59,57 +68,57 @@ function QuestionDetailsModal({
               <div>
                 <Label className="text-sm font-medium text-gray-700">ID</Label>
                 <div className="mt-1 p-2 bg-gray-50 rounded-md">
-                  <code className="text-sm">{question.id}</code>
+                  <code className="text-sm">{String(questionRecord.id)}</code>
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Resposta Correta</Label>
                 <div className="mt-1">
                   <Badge variant="default" className="text-lg px-3 py-1">
-                    {question.correct_letter}
+                    {String(questionRecord.correct_letter)}
                   </Badge>
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Componente</Label>
                 <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                  {question.component || 'Não definido'}
+                  {String(questionRecord.component) || 'Não definido'}
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Dificuldade</Label>
                 <div className="mt-1">
                   <Badge variant={
-                    question.difficulty === 'Fácil' ? 'secondary' :
-                    question.difficulty === 'Médio' ? 'default' : 'destructive'
+                    String(questionRecord.difficulty) === 'Fácil' ? 'secondary' :
+                    String(questionRecord.difficulty) === 'Médio' ? 'default' : 'destructive'
                   }>
-                    {question.difficulty}
+                    {String(questionRecord.difficulty)}
                   </Badge>
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Ano</Label>
                 <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                  {question.year || 'Não definido'}
+                  {String(questionRecord.year) || 'Não definido'}
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Chave Natural</Label>
                 <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                  {question.natural_key || 'Não definida'}
+                  {String(questionRecord.natural_key) || 'Não definida'}
                 </div>
               </div>
             </div>
 
             {/* Prompt */}
-            {question.prompt && (
+            {Boolean(questionRecord.prompt) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <HelpCircle className="h-4 w-4" />
                   Enunciado da Questão
                 </Label>
                 <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-gray-800 leading-relaxed">{question.prompt}</p>
+                  <p className="text-gray-800 leading-relaxed">{String(questionRecord.prompt)}</p>
                 </div>
               </div>
             )}
@@ -161,34 +170,34 @@ function QuestionDetailsModal({
             )}
 
             {/* Supporting Texts */}
-            {(question.text1_title || question.text1_content) && (
+            {Boolean(questionRecord.text1_title || questionRecord.text1_content) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700">Texto de Apoio 1</Label>
                 <div className="mt-2 p-4 bg-gray-50 border border-gray-200 rounded-md">
-                  {question.text1_title && (
-                    <h4 className="font-medium text-gray-800 mb-2">{question.text1_title}</h4>
+                  {Boolean(questionRecord.text1_title) && (
+                    <h4 className="font-medium text-gray-800 mb-2">{String(questionRecord.text1_title)}</h4>
                   )}
-                  {question.text1_content && (
-                    <p className="text-gray-700 leading-relaxed">{question.text1_content}</p>
+                  {Boolean(questionRecord.text1_content) && (
+                    <p className="text-gray-700 leading-relaxed">{String(questionRecord.text1_content)}</p>
                   )}
-                  {question.text1_source && (
+                  {Boolean(questionRecord.text1_source) && (
                     <p className="text-sm text-gray-500 mt-2">
-                      <strong>Fonte:</strong> {question.text1_source}
+                      <strong>Fonte:</strong> {String(questionRecord.text1_source)}
                     </p>
                   )}
                 </div>
               </div>
             )}
 
-            {(question.text2_title || question.text2_content) && (
+            {Boolean(questionRecord.text2_title || questionRecord.text2_content) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700">Texto de Apoio 2</Label>
                 <div className="mt-2 p-4 bg-gray-50 border border-gray-200 rounded-md">
-                  {question.text2_title && (
-                    <h4 className="font-medium text-gray-800 mb-2">{question.text2_title}</h4>
+                  {Boolean(questionRecord.text2_title) && (
+                    <h4 className="font-medium text-gray-800 mb-2">{String(questionRecord.text2_title)}</h4>
                   )}
-                  {question.text2_content && (
-                    <p className="text-gray-700 leading-relaxed">{question.text2_content}</p>
+                  {Boolean(questionRecord.text2_content) && (
+                    <p className="text-gray-700 leading-relaxed">{String(questionRecord.text2_content)}</p>
                   )}
                 </div>
               </div>
@@ -197,7 +206,7 @@ function QuestionDetailsModal({
             {/* Metadata */}
             <div className="pt-4 border-t">
               <div className="text-xs text-gray-500">
-                Criado em: {new Date(question.created_at || '').toLocaleString('pt-BR')}
+                Criado em: {new Date(String(questionRecord.created_at) || '').toLocaleString('pt-BR')}
               </div>
             </div>
           </div>
@@ -212,10 +221,10 @@ function CreateQuestionForm({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (data: TablesInsert<'questions'>) => Promise<void>;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [formData, setFormData] = React.useState<TablesInsert<'questions'>>({
+  const [formData, setFormData] = React.useState<Record<string, unknown>>({
     id: '',
     correct_letter: 'A',
     prompt: '',
@@ -227,15 +236,18 @@ function CreateQuestionForm({
     alt_b_justification: '',
     alt_c_justification: '',
     alt_d_justification: '',
+    image_url: null,
     component: '',
     difficulty: 'Médio',
     natural_key: '',
+    text1_title: '',
     text1_content: '',
     text1_source: '',
-    text1_title: '',
-    text2_content: '',
     text2_title: '',
+    text2_content: '',
     year: new Date().getFullYear(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
@@ -257,7 +269,7 @@ function CreateQuestionForm({
       console.error('Erro ao enviar imagem:', err);
     }
 
-    await onSubmit(questionData as TablesInsert<'questions'>);
+    await onSubmit(questionData);
   };
 
   return (
@@ -270,7 +282,7 @@ function CreateQuestionForm({
             <Label htmlFor="prompt">Enunciado da Questão</Label>
             <Textarea
               id="prompt"
-              value={formData.prompt || ''}
+              value={String(formData.prompt) || ''}
               onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
               placeholder="Digite o enunciado da questão..."
               rows={3}
@@ -279,7 +291,7 @@ function CreateQuestionForm({
 
           <div>
             <Label htmlFor="correct_letter">Resposta Correta</Label>
-            <Select value={formData.correct_letter} onValueChange={(value) => setFormData({ ...formData, correct_letter: value })}>
+            <Select value={String(formData.correct_letter) || 'A'} onValueChange={(value) => setFormData({ ...formData, correct_letter: value })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -296,7 +308,7 @@ function CreateQuestionForm({
             <Label htmlFor="component">Componente</Label>
             <Input
               id="component"
-              value={formData.component || ''}
+              value={String(formData.component) || ''}
               onChange={(e) => setFormData({ ...formData, component: e.target.value })}
               placeholder="Ex: Matemática, Português..."
             />
@@ -304,7 +316,7 @@ function CreateQuestionForm({
 
           <div>
             <Label htmlFor="difficulty">Dificuldade</Label>
-            <Select value={formData.difficulty || 'Médio'} onValueChange={(value) => setFormData({ ...formData, difficulty: value })}>
+            <Select value={String(formData.difficulty) || 'Médio'} onValueChange={(value) => setFormData({ ...formData, difficulty: value })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -321,7 +333,7 @@ function CreateQuestionForm({
             <Input
               id="year"
               type="number"
-              value={formData.year || new Date().getFullYear()}
+              value={String(formData.year) || String(new Date().getFullYear())}
               onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
             />
           </div>
@@ -330,7 +342,7 @@ function CreateQuestionForm({
             <Label htmlFor="natural_key">Chave Natural</Label>
             <Input
               id="natural_key"
-              value={formData.natural_key || ''}
+              value={String(formData.natural_key) || ''}
               onChange={(e) => setFormData({ ...formData, natural_key: e.target.value })}
               placeholder="Identificador único da questão"
             />
@@ -415,7 +427,7 @@ function CreateQuestionForm({
             <Label htmlFor="text1_title">Título do Texto 1</Label>
             <Input
               id="text1_title"
-              value={formData.text1_title || ''}
+              value={String(formData.text1_title) || ''}
               onChange={(e) => setFormData({ ...formData, text1_title: e.target.value })}
               placeholder="Título do primeiro texto..."
             />
@@ -424,7 +436,7 @@ function CreateQuestionForm({
             <Label htmlFor="text1_source">Fonte do Texto 1</Label>
             <Input
               id="text1_source"
-              value={formData.text1_source || ''}
+              value={String(formData.text1_source) || ''}
               onChange={(e) => setFormData({ ...formData, text1_source: e.target.value })}
               placeholder="Fonte/autor do texto..."
             />
@@ -433,7 +445,7 @@ function CreateQuestionForm({
             <Label htmlFor="text1_content">Conteúdo do Texto 1</Label>
             <Textarea
               id="text1_content"
-              value={formData.text1_content || ''}
+              value={String(formData.text1_content) || ''}
               onChange={(e) => setFormData({ ...formData, text1_content: e.target.value })}
               placeholder="Conteúdo do primeiro texto..."
               rows={4}
@@ -444,7 +456,7 @@ function CreateQuestionForm({
             <Label htmlFor="text2_title">Título do Texto 2</Label>
             <Input
               id="text2_title"
-              value={formData.text2_title || ''}
+              value={String(formData.text2_title) || ''}
               onChange={(e) => setFormData({ ...formData, text2_title: e.target.value })}
               placeholder="Título do segundo texto..."
             />
@@ -453,7 +465,7 @@ function CreateQuestionForm({
             <Label htmlFor="text2_content">Conteúdo do Texto 2</Label>
             <Textarea
               id="text2_content"
-              value={formData.text2_content || ''}
+              value={String(formData.text2_content) || ''}
               onChange={(e) => setFormData({ ...formData, text2_content: e.target.value })}
               placeholder="Conteúdo do segundo texto..."
               rows={4}
@@ -480,30 +492,33 @@ function EditQuestionForm({
   onSubmit,
   onCancel,
 }: {
-  record: Tables<'questions'>;
-  onSubmit: (data: TablesUpdate<'questions'>) => Promise<void>;
+  record: Record<string, unknown>;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [formData, setFormData] = React.useState<TablesUpdate<'questions'>>({
-    correct_letter: record.correct_letter,
-    prompt: record.prompt,
-    alt_a_text: record.alt_a_text,
-    alt_b_text: record.alt_b_text,
-    alt_c_text: record.alt_c_text,
-    alt_d_text: record.alt_d_text,
-    alt_a_justification: record.alt_a_justification,
-    alt_b_justification: record.alt_b_justification,
-    alt_c_justification: record.alt_c_justification,
-    alt_d_justification: record.alt_d_justification,
-    component: record.component,
-    difficulty: record.difficulty,
-    natural_key: record.natural_key,
-    text1_content: record.text1_content,
-    text1_source: record.text1_source,
-    text1_title: record.text1_title,
-    text2_content: record.text2_content,
-    text2_title: record.text2_title,
+  const [formData, setFormData] = React.useState<Record<string, unknown>>({
+    correct_letter: String(record.correct_letter || ''),
+    prompt: String(record.prompt || ''),
+    alt_a_text: String(record.alt_a_text || ''),
+    alt_b_text: String(record.alt_b_text || ''),
+    alt_c_text: String(record.alt_c_text || ''),
+    alt_d_text: String(record.alt_d_text || ''),
+    alt_a_justification: String(record.alt_a_justification || ''),
+    alt_b_justification: String(record.alt_b_justification || ''),
+    alt_c_justification: String(record.alt_c_justification || ''),
+    alt_d_justification: String(record.alt_d_justification || ''),
+    image_url: record.image_url,
+    component: String(record.component || ''),
+    difficulty: String(record.difficulty || ''),
+    natural_key: String(record.natural_key || ''),
+    text1_title: String(record.text1_title || ''),
+    text1_content: String(record.text1_content || ''),
+    text1_source: String(record.text1_source || ''),
+    text2_title: String(record.text2_title || ''),
+    text2_content: String(record.text2_content || ''),
     year: record.year,
+    created_at: record.created_at,
+    updated_at: new Date().toISOString(),
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
@@ -520,7 +535,7 @@ function EditQuestionForm({
       console.error('Erro ao enviar imagem:', err);
     }
 
-    await onSubmit(updates as TablesUpdate<'questions'>);
+    await onSubmit(updates);
   };
 
   return (
@@ -530,7 +545,7 @@ function EditQuestionForm({
           <Label htmlFor="prompt">Enunciado</Label>
           <Textarea
             id="prompt"
-            value={formData.prompt || ''}
+            value={String(formData.prompt) || ''}
             onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
             rows={2}
           />
@@ -538,7 +553,7 @@ function EditQuestionForm({
 
         <div>
           <Label htmlFor="correct_letter">Resposta Correta</Label>
-          <Select value={formData.correct_letter || 'A'} onValueChange={(value) => setFormData({ ...formData, correct_letter: value })}>
+          <Select value={String(formData.correct_letter) || 'A'} onValueChange={(value) => setFormData({ ...formData, correct_letter: value })}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -557,10 +572,10 @@ function EditQuestionForm({
         <div className="col-span-2">
           <Label>Imagem</Label>
           <div className="mt-2">
-            {record.image_url && !imagePreview && (
+            {Boolean(record.image_url) && !imagePreview ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={record.image_url as string} alt="Imagem atual" className="max-h-40 rounded border mb-2" />
-            )}
+              <img src={String(record.image_url) || ''} alt="Imagem atual" className="max-h-40 rounded border mb-2" />
+            ) : null}
             <input
               type="file"
               accept="image/*"
@@ -598,14 +613,14 @@ function EditQuestionForm({
 }
 
 // Column configuration for questions table
-const questionColumns = [
+const questionColumns: ColumnConfig[] = [
   {
     key: 'image_url',
     label: 'Imagem',
-    render: (value: string) => (
-      value ? (
+    render: (value: unknown) => (
+      String(value) ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={value} alt="miniatura" className="h-12 w-12 object-cover rounded border" />
+        <img src={String(value)} alt="miniatura" className="h-12 w-12 object-cover rounded border" />
       ) : (
         <span className="text-gray-400 text-sm">—</span>
       )
@@ -614,28 +629,29 @@ const questionColumns = [
   {
     key: 'id',
     label: 'ID',
-    render: (value: string) => (
+    render: (value: unknown) => (
       <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-        {value?.substring(0, 8)}...
+        {String(value)?.substring(0, 8)}...
       </code>
     ),
   },
   {
     key: 'prompt',
     label: 'Enunciado',
-    render: (value: string) => {
-      if (!value) {
+    render: (value: unknown) => {
+      const stringValue = String(value || '');
+      if (!stringValue) {
         return <span className="text-gray-400 text-sm italic">Sem enunciado</span>;
       }
 
-      const preview = value.length > 80 ? `${value.substring(0, 80)}...` : value;
+      const preview = stringValue.length > 80 ? `${stringValue.substring(0, 80)}...` : stringValue;
 
       return (
         <div className="space-y-1">
-          <div className="text-sm leading-tight" title={value}>
+          <div className="text-sm leading-tight" title={stringValue}>
             {preview}
           </div>
-          {value.length > 80 && (
+          {stringValue.length > 80 && (
             <div className="text-xs text-gray-500">
               Clique em &ldquo;Ver Detalhes&rdquo; para ver completo
             </div>
@@ -647,19 +663,20 @@ const questionColumns = [
   {
     key: 'alternatives',
     label: 'Alternativas',
-    render: (value: any, record: any) => {
+    render: (value: unknown, record: Record<string, unknown>) => {
+      const questionRecord = record as Record<string, unknown>;
       const alternatives = [
-        { letter: 'A', text: record.alt_a_text },
-        { letter: 'B', text: record.alt_b_text },
-        { letter: 'C', text: record.alt_c_text },
-        { letter: 'D', text: record.alt_d_text },
+        { letter: 'A', text: questionRecord.alt_a_text },
+        { letter: 'B', text: questionRecord.alt_b_text },
+        { letter: 'C', text: questionRecord.alt_c_text },
+        { letter: 'D', text: questionRecord.alt_d_text },
       ].filter(alt => alt.text);
 
       if (alternatives.length === 0) {
         return <span className="text-gray-400 text-sm">Sem alternativas</span>;
       }
 
-      const correctAnswer = alternatives.find(alt => alt.letter === record.correct_letter);
+      const correctAnswer = alternatives.find(alt => alt.letter === String(questionRecord.correct_letter));
 
       return (
         <div className="space-y-1">
@@ -687,9 +704,9 @@ const questionColumns = [
   {
     key: 'correct_letter',
     label: 'Resposta',
-    render: (value: string) => (
+    render: (value: unknown) => (
       <Badge variant="default">
-        {value}
+        {String(value)}
       </Badge>
     ),
   },
@@ -700,14 +717,17 @@ const questionColumns = [
   {
     key: 'difficulty',
     label: 'Dificuldade',
-    render: (value: string) => (
-      <Badge variant={
-        value === 'Fácil' ? 'secondary' :
-        value === 'Médio' ? 'default' : 'destructive'
-      }>
-        {value}
-      </Badge>
-    ),
+    render: (value: unknown) => {
+      const stringValue = String(value || '');
+      return (
+        <Badge variant={
+          stringValue === 'Fácil' ? 'secondary' :
+          stringValue === 'Médio' ? 'default' : 'destructive'
+        }>
+          {stringValue}
+        </Badge>
+      );
+    },
   },
   {
     key: 'year',
@@ -716,7 +736,7 @@ const questionColumns = [
   {
     key: 'created_at',
     label: 'Criado em',
-    render: (value: string) => new Date(value).toLocaleDateString('pt-BR'),
+    render: (value: unknown) => new Date(String(value)).toLocaleDateString('pt-BR'),
   },
 ];
 
@@ -773,7 +793,7 @@ const questionFilters: FilterOption[] = [
 export function QuestionsManagement() {
   const crud = useMemo(() => adminCRUD.questions(), []);
   const searchFields = useMemo(() => ['prompt', 'component', 'natural_key'], []);
-  const [viewingQuestion, setViewingQuestion] = useState<Tables<'questions'> | null>(null);
+  const [viewingQuestion, setViewingQuestion] = useState<Record<string, unknown> | null>(null);
 
   return (
     <>
@@ -786,11 +806,11 @@ export function QuestionsManagement() {
           {
             key: 'actions',
             label: 'Visualizar',
-            render: (value: any, record: Tables<'questions'>) => (
+            render: (value: unknown, record: Record<string, unknown>) => (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setViewingQuestion(record)}
+                onClick={() => setViewingQuestion(record as Record<string, unknown>)}
                 className="flex items-center gap-1"
               >
                 <Eye className="h-4 w-4" />

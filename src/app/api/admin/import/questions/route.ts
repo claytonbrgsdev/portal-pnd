@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
       const { question, metadata } = toQuestionAndMetadata(items[i])
 
       // Insert question first
-      const { data: inserted, error: qErr } = await adminClient
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: inserted, error: qErr } = await (adminClient as any)
         .from('questions')
         .insert(question)
         .select('id')
@@ -106,7 +107,8 @@ export async function POST(request: NextRequest) {
 
       const questionId = inserted.id as string
 
-      const { error: mErr } = await adminClient
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: mErr } = await (adminClient as any)
         .from('question_metadata')
         .insert({ ...metadata, question_id: questionId })
 
@@ -119,7 +121,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Log admin action summary
-    await supabase.from('admin_actions').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('admin_actions').insert({
       admin_id: session.user.id,
       action: 'questions_import',
       payload: { total: items.length, imported: results.filter(r => !r.error).length, errors: results.filter(r => r.error) }

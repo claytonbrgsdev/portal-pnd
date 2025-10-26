@@ -3,13 +3,6 @@ import { createClient as createServerClient } from '@/utils/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { query as pgQuery } from '@/lib/db'
 
-type TableColumn = {
-  column_name: string
-  data_type: string
-  is_nullable: string
-  column_default: string | null
-}
-
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ table: string }> }

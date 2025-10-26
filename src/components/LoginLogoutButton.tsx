@@ -22,10 +22,10 @@ const LoginLogoutButton = () => {
           className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <div className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-            {profile?.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+            {profile?.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
           </div>
           <span className="text-sm font-medium hidden md:block">
-            {profile?.name || user.email}
+            {profile?.full_name || user.email}
           </span>
           <svg
             className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}

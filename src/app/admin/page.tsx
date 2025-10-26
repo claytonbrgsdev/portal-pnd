@@ -4,8 +4,23 @@ import AdminUserList from '@/components/AdminUserList'
 import DatabaseManager from '@/components/DatabaseManager'
 import { AdminTabs } from '@/components/admin/AdminTabs'
 // Types for admin page
-type Profile = any
-type AdminAction = any
+type Profile = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+type AdminAction = {
+  id: number;
+  admin_id: string;
+  action: string;
+  target_user_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -32,14 +47,16 @@ export default async function AdminPage() {
   }
 
   // Log admin access
-  await supabase.from('admin_actions').insert({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('admin_actions').insert({
     admin_id: session.user.id,
     action: 'admin_page_access',
     payload: { timestamp: new Date().toISOString() }
   })
 
   // Fetch all profiles
-  const { data: profiles, error: profilesError } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profiles, error: profilesError } = await (supabase as any)
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: false })
@@ -49,7 +66,8 @@ export default async function AdminPage() {
   }
 
   // Fetch recent admin actions
-  const { data: adminActions, error: actionsError } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: adminActions, error: actionsError } = await (supabase as any)
     .from('admin_actions')
     .select('*')
     .order('created_at', { ascending: false })

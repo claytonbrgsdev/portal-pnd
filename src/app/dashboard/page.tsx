@@ -3,20 +3,21 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginLogoutButton from '@/components/LoginLogoutButton';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Tables } from '@/lib/database.types';
 
 export default function DashboardPage() {
   const { user, profile } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<{ total: number; finished: number; avg: number } | null>(null);
-  const [recent, setRecent] = useState<any[]>([]);
+  const [recent, setRecent] = useState<Tables<'simulado_attempts'>[]>([]);
 
   useEffect(() => {
     const load = async () => {
       const res = await fetch('/api/admin/database/data/simulado_attempts?page=1&limit=5&orderBy=started_at');
       const json = await res.json();
-      const list: any[] = json?.data || [];
+      const list: Tables<'simulado_attempts'>[] = json?.data || [];
       setRecent(list);
       const finished = list.filter(a => !!a.finished_at);
       const avg = finished.length > 0 ? finished.reduce((s, a) => s + Number(a.score || 0), 0) / finished.length : 0;
@@ -35,7 +36,7 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Meu Painel</h1>
                 <p className="text-sm text-gray-600">
-                  Bem-vindo, {profile?.name || user?.email}!
+                  Bem-vindo, {profile?.full_name || user?.email}!
                 </p>
               </div>
               <LoginLogoutButton />
@@ -49,7 +50,7 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow-lg p-12 max-w-2xl mx-auto">
               <div className="mb-8">
                 <div className="w-16 h-16 bg-gray-900 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                  {profile?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
               </div>
 

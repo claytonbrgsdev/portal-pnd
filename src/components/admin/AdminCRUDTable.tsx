@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Tables, TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { SupabaseAdminCRUD } from '@/lib/supabase-admin';
 import { Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -13,25 +12,25 @@ import { AdminFilters, FilterOption } from './AdminFilters';
 interface ColumnConfig {
   key: string;
   label: string;
-  render?: (value: any, record: any) => React.ReactNode;
+  render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode;
   sortable?: boolean;
   filterable?: boolean;
 }
 
-interface AdminCRUDTableProps<T extends keyof Tables> {
-  tableName: T;
+interface AdminCRUDTableProps {
+  tableName: string;
   title: string;
   description?: string;
   columns: ColumnConfig[];
-  crud: SupabaseAdminCRUD<T>;
+  crud: SupabaseAdminCRUD;
   createForm?: React.ComponentType<{
-    onSubmit: (data: TablesInsert[T]) => Promise<void>;
+    onSubmit: (data: Record<string, unknown>) => Promise<void>;
     onCancel: () => void;
-    initialData?: Partial<TablesInsert[T]>;
+    initialData?: Partial<Record<string, unknown>>;
   }>;
   editForm?: React.ComponentType<{
-    record: Tables[T];
-    onSubmit: (data: TablesUpdate[T]) => Promise<void>;
+    record: Record<string, unknown>;
+    onSubmit: (data: Record<string, unknown>) => Promise<void>;
     onCancel: () => void;
   }>;
   searchFields?: string[];
@@ -43,7 +42,7 @@ interface AdminCRUDTableProps<T extends keyof Tables> {
   };
 }
 
-export function AdminCRUDTable<T extends keyof Tables>({
+export function AdminCRUDTable({
   tableName,
   title,
   description,
@@ -54,15 +53,15 @@ export function AdminCRUDTable<T extends keyof Tables>({
   searchFields = [],
   filters = [],
   actions = { canCreate: true, canEdit: true, canDelete: true },
-}: AdminCRUDTableProps<T>) {
-  const [data, setData] = useState<Tables[T][]>([]);
+}: AdminCRUDTableProps) {
+  const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
+  const [activeFilters, setActiveFilters] = useState<Record<string, unknown>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<Tables[T] | null>(null);
-  const [deletingRecord, setDeletingRecord] = useState<Tables[T] | null>(null);
+  const [editingRecord, setEditingRecord] = useState<Record<string, unknown> | null>(null);
+  const [deletingRecord, setDeletingRecord] = useState<Record<string, unknown> | null>(null);
   const [operationLoading, setOperationLoading] = useState<string | null>(null);
 
   // Load data
@@ -72,7 +71,7 @@ export function AdminCRUDTable<T extends keyof Tables>({
 
     try {
       // Combine search filters with active filters
-      const allFilters: Record<string, any> = { ...activeFilters };
+      const allFilters: Record<string, unknown> = { ...activeFilters };
 
       // Add text search filters if search term exists
       if (searchTerm && searchFields.length > 0) {
@@ -89,9 +88,10 @@ export function AdminCRUDTable<T extends keyof Tables>({
         console.error('Detailed error:', error);
         setError(error.message || error.details || 'Erro ao carregar dados');
       } else {
-        setData(result || []);
+        setData((result as unknown as Record<string, unknown>[]) || []);
       }
     } catch (err) {
+      console.error('Error loading data:', err);
       setError('Erro inesperado ao carregar dados');
     } finally {
       setLoading(false);
@@ -103,7 +103,7 @@ export function AdminCRUDTable<T extends keyof Tables>({
   }, [loadData]);
 
   // Handle create
-  const handleCreate = async (formData: TablesInsert[T]) => {
+  const handleCreate = async (formData: Record<string, unknown>) => {
     setOperationLoading('create');
 
     try {
@@ -116,6 +116,7 @@ export function AdminCRUDTable<T extends keyof Tables>({
         await loadData();
       }
     } catch (err) {
+      console.error('Error creating record:', err);
       setError('Erro inesperado ao criar registro');
     } finally {
       setOperationLoading(null);
@@ -123,7 +124,7 @@ export function AdminCRUDTable<T extends keyof Tables>({
   };
 
   // Handle edit
-  const handleEdit = async (formData: TablesUpdate[T]) => {
+  const handleEdit = async (formData: Record<string, unknown>) => {
     if (!editingRecord) return;
 
     setOperationLoading('edit');
@@ -138,6 +139,7 @@ export function AdminCRUDTable<T extends keyof Tables>({
         await loadData();
       }
     } catch (err) {
+      console.error('Error updating record:', err);
       setError('Erro inesperado ao atualizar registro');
     } finally {
       setOperationLoading(null);
@@ -160,6 +162,7 @@ export function AdminCRUDTable<T extends keyof Tables>({
         await loadData();
       }
     } catch (err) {
+      console.error('Error deleting record:', err);
       setError('Erro inesperado ao excluir registro');
     } finally {
       setOperationLoading(null);
@@ -262,14 +265,14 @@ export function AdminCRUDTable<T extends keyof Tables>({
               <tbody>
                 {data.map((record, index) => (
                   <tr
-                    key={`${(record as any).id ?? (record as any).uuid ?? (record as any).key ?? (record as any).slug ?? `${String(tableName)}-${index}`}`}
+                    key={`${(record as Record<string, unknown>).id ?? (record as Record<string, unknown>).uuid ?? (record as Record<string, unknown>).key ?? (record as Record<string, unknown>).slug ?? `${String(tableName)}-${index}`}`}
                     className="border-b hover:bg-muted/50"
                   >
                     {columns.map((column) => (
                       <td key={column.key} className="p-4">
                         {column.render
-                          ? column.render((record as any)[column.key], record)
-                          : (record as any)[column.key] || '-'
+                          ? column.render((record as Record<string, unknown>)[column.key], record)
+                          : String((record as Record<string, unknown>)[column.key] || '-')
                         }
                       </td>
                     ))}
