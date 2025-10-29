@@ -84,7 +84,12 @@ function createCrud(tableName: string): SupabaseAdminCRUD {
 
     async update(id: string, updates: Record<string, unknown>): Promise<MutationResponse> {
       // API expects single-column updates; apply sequentially
-      const entries = Object.entries(updates)
+      // Skip undefined values to avoid 400 errors
+      const entries = Object.entries(updates).filter(([, value]) => value !== undefined)
+
+      if (entries.length === 0) {
+        return {}
+      }
       for (const [columnName, newValue] of entries) {
         const res = await fetch(baseUrl, {
           method: 'PUT',
@@ -123,10 +128,34 @@ function createCrud(tableName: string): SupabaseAdminCRUD {
   }
 }
 
+// Specialized CRUD for questions: perform single bulk update to avoid partial failures
+function createQuestionsCrud(): SupabaseAdminCRUD {
+  const generic = createCrud('questions')
+  return {
+    ...generic,
+    async update(id: string, updates: Record<string, unknown>): Promise<MutationResponse> {
+      // Bulk update via dedicated API
+      const res = await fetch(`/api/admin/questoes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates })
+      })
+      if (!res.ok) {
+        try {
+          const err = await res.json()
+          return { error: { message: err.error || 'Failed to update', details: err.details } }
+        } catch {
+          return { error: { message: 'Failed to update' } }
+        }
+      }
+      return {}
+    }
+  }
+}
+
 export const adminCRUD = {
-  questions: () => createCrud('questions'),
+  questions: () => createQuestionsCrud(),
   question_metadata: () => createCrud('question_metadata'),
   profiles: () => createCrud('profiles'),
   admin_actions: () => createCrud('admin_actions'),
 }
-

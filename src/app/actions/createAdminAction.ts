@@ -11,15 +11,15 @@ interface AdminActionData {
 export async function createAdminAction(data: AdminActionData) {
   const supabase = await createClient()
 
-  // Get current user session
-  const { data: { session } } = await supabase.auth.getSession()
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     throw new Error('Not authenticated')
   }
 
   // Verify user is admin
-  const userRole = session.user.user_metadata?.user_role
+  const userRole = user.user_metadata?.user_role
   if (userRole !== 'admin') {
     throw new Error('Not authorized: admin access required')
   }
@@ -27,7 +27,7 @@ export async function createAdminAction(data: AdminActionData) {
   // Log the admin action
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).from('admin_actions').insert({
-    admin_id: session.user.id,
+    admin_id: user.id,
     action: data.action,
     target_user_id: data.targetUserId || null,
     payload: data.payload || {}

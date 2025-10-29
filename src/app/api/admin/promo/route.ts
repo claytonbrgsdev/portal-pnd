@@ -11,16 +11,16 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClient()
 
     // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Log the admin action
     try {
-      await logUserRoleChange(userId, newRole, oldRole)
+    await logUserRoleChange(userId, newRole, oldRole)
     } catch (logError) {
       console.error('Error logging admin action:', logError)
       // Don't fail the request if logging fails

@@ -9,17 +9,17 @@ export async function GET() {
     // Use server client with authentication context
     const supabase = await createServerClient()
 
-    // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    // Check if user is authenticated and is admin (use getUser for authenticated data)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -28,7 +28,7 @@ export async function GET() {
     }
 
     console.log('Tables API - User authenticated:', {
-      userId: session.user.id,
+      userId: user.id,
       role: userRole
     })
 

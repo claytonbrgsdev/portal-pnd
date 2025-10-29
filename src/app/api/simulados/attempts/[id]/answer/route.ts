@@ -5,8 +5,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const { id } = await context.params
   try {
     const supabase = await createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
     const body = await request.json()
     const { question_id, selected_letter } = body as { question_id: string; selected_letter: 'A'|'B'|'C'|'D' }
@@ -42,5 +42,4 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
 

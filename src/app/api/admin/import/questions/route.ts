@@ -66,11 +66,11 @@ function toQuestionAndMetadata(input: InputJsonQuestion) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-    const role = session.user.user_metadata?.user_role
+    const role = user.user_metadata?.user_role
     if (role !== 'admin') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     // Log admin action summary
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('admin_actions').insert({
-      admin_id: session.user.id,
+      admin_id: user.id,
       action: 'questions_import',
       payload: { total: items.length, imported: results.filter(r => !r.error).length, errors: results.filter(r => r.error) }
     })
@@ -134,5 +134,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
 

@@ -189,16 +189,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Get initial session
+    // Get initial user (validated)
     const getInitialSession = async () => {
       try {
-        console.log('Getting initial session...');
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Getting initial user...');
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (session?.user) {
-          console.log('User found in session:', session.user.email);
-          setUser(session.user);
-          await fetchUserProfile(session.user.id);
+        if (user) {
+          console.log('User found:', user.email);
+          setUser(user);
+          await fetchUserProfile(user.id);
         } else {
           console.log('No user in session');
         }
@@ -222,12 +222,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+      async (event) => {
+        console.log('Auth state changed:', event);
 
-        if (session?.user) {
-          setUser(session.user);
-          await fetchUserProfile(session.user.id);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          await fetchUserProfile(user.id);
         } else {
           setUser(null);
           setProfile(null);

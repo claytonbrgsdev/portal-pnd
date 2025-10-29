@@ -29,17 +29,17 @@ export async function GET(
     // Use server client with authentication context
     const supabase = await createServerClient()
 
-    // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    // Check if user is authenticated and is admin (use getUser for authenticated data)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -47,8 +47,8 @@ export async function GET(
       )
     }
 
-    console.log('Data API (POST) - User authenticated:', {
-      userId: session.user.id,
+    console.log('Data API - User authenticated:', {
+      userId: user.id,
       role: userRole,
       tableName
     })
@@ -134,17 +134,17 @@ export async function PUT(
     // Use server client with authentication context
     const supabase = await createServerClient()
 
-    // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    // Check if user is authenticated and is admin (use getUser for authenticated data)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -152,16 +152,16 @@ export async function PUT(
       )
     }
 
-    console.log('Data API (POST) - User authenticated:', {
-      userId: session.user.id,
+    console.log('Data API - User authenticated:', {
+      userId: user.id,
       role: userRole,
       tableName
     })
 
     const body = await request.json()
-    const { rowId, columnName, newValue } = body
+    const { rowId, columnName, newValue } = body as { rowId?: string; columnName?: string; newValue?: unknown }
 
-    if (!rowId || !columnName || newValue === undefined) {
+    if (!rowId || !columnName || typeof columnName !== 'string' || newValue === undefined) {
       return NextResponse.json(
         { error: 'rowId, columnName, and newValue are required' },
         { status: 400 }
@@ -189,7 +189,7 @@ export async function PUT(
     if (error) {
       console.error('Error updating table data:', error)
       return NextResponse.json(
-        { error: 'Failed to update table data' },
+        { error: 'Failed to update table data', details: error.message },
         { status: 500 }
       )
     }
@@ -197,7 +197,7 @@ export async function PUT(
     // Log the admin action
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('admin_actions').insert({
-      admin_id: session.user.id,
+      admin_id: user.id,
       action: 'database_data_update',
       payload: {
         table_name: tableName,
@@ -232,17 +232,17 @@ export async function DELETE(
     // Use server client with authentication context
     const supabase = await createServerClient()
 
-    // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    // Check if user is authenticated and is admin (use getUser for authenticated data)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -250,8 +250,8 @@ export async function DELETE(
       )
     }
 
-    console.log('Data API (POST) - User authenticated:', {
-      userId: session.user.id,
+    console.log('Data API - User authenticated:', {
+      userId: user.id,
       role: userRole,
       tableName
     })
@@ -292,10 +292,25 @@ export async function DELETE(
       )
     }
 
+    // Best-effort: cleanup companion metadata for known tables
+    try {
+      if (tableName === 'questions') {
+        const { error: metaDelErr } = await supabaseAdmin
+          .from('question_metadata')
+          .delete()
+          .eq('question_id', rowId)
+        if (metaDelErr) {
+          console.warn('Cleanup metadata warning:', metaDelErr)
+        }
+      }
+    } catch (e) {
+      console.warn('Cleanup metadata exception:', e)
+    }
+
     // Log the admin action
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('admin_actions').insert({
-      admin_id: session.user.id,
+      admin_id: user.id,
       action: 'database_data_delete',
       payload: {
         table_name: tableName,
@@ -328,17 +343,17 @@ export async function POST(
     // Use server client with authentication context
     const supabase = await createServerClient()
 
-    // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    // Check if user is authenticated and is admin (use getUser for authenticated data)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -346,8 +361,8 @@ export async function POST(
       )
     }
 
-    console.log('Data API (POST) - User authenticated:', {
-      userId: session.user.id,
+    console.log('Data API - User authenticated:', {
+      userId: user.id,
       role: userRole,
       tableName
     })
@@ -388,10 +403,27 @@ export async function POST(
       )
     }
 
+    // Auto-create companion records for known tables
+    try {
+      if (tableName === 'questions') {
+        const newId = data?.[0]?.id as string | undefined
+        if (newId) {
+          const { error: metaErr } = await supabaseAdmin
+            .from('question_metadata')
+            .upsert({ question_id: newId }, { onConflict: 'question_id' })
+          if (metaErr) {
+            console.warn('Auto-create metadata warning:', metaErr)
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-create metadata exception:', e)
+    }
+
     // Log the admin action
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('admin_actions').insert({
-      admin_id: session.user.id,
+      admin_id: user.id,
       action: 'database_data_insert',
       payload: {
         table_name: tableName,

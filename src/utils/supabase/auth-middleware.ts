@@ -19,8 +19,8 @@ export async function applyAuthorization(
 
   try {
     // Verifica sessão do usuário
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('🔍 Session exists:', !!session, session?.user?.email);
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('🔍 User exists:', !!user, user?.email);
 
     const { pathname } = request.nextUrl;
 
@@ -35,12 +35,12 @@ export async function applyAuthorization(
       pathname,
       isProtectedRoute,
       isAdminRoute,
-      sessionUserId: session?.user?.id
+      sessionUserId: user?.id
     });
 
     if (isProtectedRoute) {
       // Se não há sessão e tentando acessar rota protegida
-      if (!session) {
+      if (!user) {
         console.log('🔍 No session, redirecting to login');
         const redirectUrl = new URL('/', request.url);
         return NextResponse.redirect(redirectUrl);
@@ -49,13 +49,13 @@ export async function applyAuthorization(
       // Se é rota de admin, verifica se usuário é admin
       if (isAdminRoute) {
         try {
-          console.log('🔍 Checking admin status for user:', session.user.id);
+          console.log('🔍 Checking admin status for user:', user.id);
 
           // Verifica se usuário tem role admin no JWT metadata
-          const isAdminFromJWT = session.user.user_metadata?.user_role === 'admin';
+          const isAdminFromJWT = user.user_metadata?.user_role === 'admin';
 
           console.log('🔍 Admin check:', {
-            jwtRole: session.user.user_metadata?.user_role,
+            jwtRole: user.user_metadata?.user_role,
             isAdminFromJWT
           });
 

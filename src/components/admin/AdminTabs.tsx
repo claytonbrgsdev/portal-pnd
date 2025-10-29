@@ -17,7 +17,7 @@ export function AdminTabs() {
     { id: 'profiles' as TabType, label: 'Perfis de Usuário', component: ProfilesManagement },
     { id: 'questions' as TabType, label: 'Questões', component: QuestionsManagement },
     { id: 'metadata' as TabType, label: 'Metadados', component: QuestionMetadataManagement },
-    { id: 'actions' as TabType, label: 'Ações Admin', component: AdminActionsViewer },
+    { id: 'actions' as TabType, label: 'Ações Administrativas', component: AdminActionsViewer },
     { id: 'database' as TabType, label: 'Banco de Dados', component: () => <DatabaseManager /> },
     { id: 'import' as TabType, label: 'Importar Questões', component: () => <QuestionsImport /> },
   ], [])

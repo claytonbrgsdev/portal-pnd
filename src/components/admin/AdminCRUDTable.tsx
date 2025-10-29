@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -8,6 +8,7 @@ import { SupabaseAdminCRUD } from '@/lib/supabase-admin';
 import { Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AdminFilters, FilterOption } from './AdminFilters';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ColumnConfig {
   key: string;
@@ -40,6 +41,12 @@ interface AdminCRUDTableProps {
     canEdit?: boolean;
     canDelete?: boolean;
   };
+  disableToolbar?: boolean;
+  externalFilters?: Record<string, unknown>;
+  externalSearch?: string;
+  createLabel?: string;
+  fixedLayout?: boolean;
+  columnClasses?: Record<string, string>; // per column key classes applied to th/td
 }
 
 export function AdminCRUDTable({
@@ -53,11 +60,20 @@ export function AdminCRUDTable({
   searchFields = [],
   filters = [],
   actions = { canCreate: true, canEdit: true, canDelete: true },
+  disableToolbar = false,
+  externalFilters,
+  externalSearch,
+  createLabel,
+  fixedLayout = false,
+  columnClasses = {},
 }: AdminCRUDTableProps) {
   const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Record<string, unknown>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record<string, unknown> | null>(null);
@@ -71,12 +87,13 @@ export function AdminCRUDTable({
 
     try {
       // Combine search filters with active filters
-      const allFilters: Record<string, unknown> = { ...activeFilters };
+      const allFilters: Record<string, unknown> = externalFilters ? { ...externalFilters } : { ...activeFilters };
 
       // Add text search filters if search term exists
-      if (searchTerm && searchFields.length > 0) {
+      const searchValue = (externalSearch ?? debouncedSearchTerm)?.trim();
+      if (searchValue && searchFields.length > 0) {
         searchFields.forEach(field => {
-          allFilters[field] = searchTerm;
+          allFilters[field] = searchValue;
         });
       }
 
@@ -96,11 +113,21 @@ export function AdminCRUDTable({
     } finally {
       setLoading(false);
     }
-  }, [crud, activeFilters, searchTerm, searchFields]);
+  }, [crud, activeFilters, debouncedSearchTerm, searchFields, externalFilters, externalSearch]);
 
   useEffect(() => {
-    loadData();
+    (async () => {
+      await loadData();
+      setInitialLoaded(true);
+    })();
   }, [loadData]);
+
+  // Debounce search typing to avoid spam requests (only for internal search)
+  useEffect(() => {
+    if (externalSearch !== undefined) return;
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 500);
+    return () => clearTimeout(t);
+  }, [searchTerm, externalSearch]);
 
   // Handle create
   const handleCreate = async (formData: Record<string, unknown>) => {
@@ -171,7 +198,7 @@ export function AdminCRUDTable({
 
   // Data is already filtered by backend, no need for client-side filtering
 
-  if (loading) {
+  if (!initialLoaded && loading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -184,6 +211,100 @@ export function AdminCRUDTable({
 
   return (
     <>
+      {/* Toolbar superior: busca + filtros rápidos + criar */}
+      {!disableToolbar && (
+      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex-1 flex items-center gap-2 flex-wrap">
+          {searchFields.length > 0 && (
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar questões..."
+                value={externalSearch !== undefined ? externalSearch : searchTerm}
+                onChange={(e) => externalSearch !== undefined ? undefined : setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+              {loading && (
+                <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          )}
+
+          {filters.slice(0, 3).map((f) => (
+            <div key={`quick-${f.key}`} className="w-44">
+              {f.type === 'select' && f.options && (
+                <Select
+                  value={String(activeFilters[f.key] || 'all')}
+                  onValueChange={(value) => {
+                    const v = value === 'all' ? '' : value
+                    const next = { ...activeFilters }
+                    if (v === '') delete next[f.key]
+                    else next[f.key] = v
+                    setActiveFilters(next)
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={f.label} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{f.label === 'Ano' ? 'Todos os anos' : 'Todos'}</SelectItem>
+                    {f.options.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {f.type === 'number' && (
+                <Input
+                  type="number"
+                  placeholder={f.placeholder || f.label}
+                  value={String(activeFilters[f.key] ?? '')}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    const next = { ...activeFilters }
+                    if (!v) delete next[f.key]
+                    else next[f.key] = Number(v)
+                    setActiveFilters(next)
+                  }}
+                />
+              )}
+              {f.type === 'text' && (
+                <Input
+                  placeholder={f.placeholder || f.label}
+                  value={String(activeFilters[f.key] ?? '')}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    const next = { ...activeFilters }
+                    if (!v) delete next[f.key]
+                    else next[f.key] = v
+                    setActiveFilters(next)
+                  }}
+                />
+              )}
+            </div>
+          ))}
+
+          {filters.length > 3 && (
+            <Button variant="outline" onClick={() => setShowAdvancedFilters((s) => !s)}>
+              Mais Filtros
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-500 hidden md:block">
+            {data.length} registros encontrados
+          </div>
+          {actions.canCreate && CreateForm && (
+            <Button onClick={() => setShowCreateForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {createLabel || 'Novo Registro'}
+            </Button>
+          )}
+        </div>
+      </div>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -191,33 +312,21 @@ export function AdminCRUDTable({
               <CardTitle>{title}</CardTitle>
               {description && <CardDescription>{description}</CardDescription>}
             </div>
-            <div className="flex items-center gap-2">
-              {/* Search */}
-              {searchFields.length > 0 && (
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 w-64"
-                  />
-                </div>
-              )}
-
-              {/* Create button */}
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-500">
+                {data.length} registros encontrados
+              </div>
               {actions.canCreate && CreateForm && (
                 <Button onClick={() => setShowCreateForm(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Criar
+                  {createLabel || 'Novo Registro'}
                 </Button>
               )}
             </div>
           </div>
         </CardHeader>
 
-        {/* Filters */}
-        {filters.length > 0 && (
+        {showAdvancedFilters && filters.length > 0 && (
           <CardContent className="pt-0">
             <AdminFilters
               filters={filters}
@@ -251,15 +360,15 @@ export function AdminCRUDTable({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className={`w-full ${fixedLayout ? 'table-fixed' : ''}`}>
               <thead>
                 <tr className="border-b">
                   {columns.map((column) => (
-                    <th key={column.key} className="text-left p-4 font-medium">
+                    <th key={column.key} className={`text-left p-3 font-medium align-top text-sm ${columnClasses[column.key] || ''}`}>
                       {column.label}
                     </th>
                   ))}
-                  <th className="text-right p-4 font-medium">Ações</th>
+                  <th className={`text-left p-3 font-medium align-top text-sm ${columnClasses['__actions'] || ''}`}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,14 +378,14 @@ export function AdminCRUDTable({
                     className="border-b hover:bg-muted/50"
                   >
                     {columns.map((column) => (
-                      <td key={column.key} className="p-4">
+                      <td key={column.key} className={`p-3 text-left align-top whitespace-normal break-normal min-w-0 text-sm ${columnClasses[column.key] || ''}`}>
                         {column.render
                           ? column.render((record as Record<string, unknown>)[column.key], record)
                           : String((record as Record<string, unknown>)[column.key] || '-')
                         }
                       </td>
                     ))}
-                    <td className="p-4 text-right">
+                    <td className={`p-3 text-left align-top ${columnClasses['__actions'] || ''}`}>
                       <div className="flex items-center justify-end gap-2">
                         {actions.canEdit && EditForm && (
                           <Button

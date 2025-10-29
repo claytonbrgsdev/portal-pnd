@@ -44,26 +44,29 @@ export const supabaseAdmin = createClient<Database>(
  * Note: call this from client-side code only.
  */
 export async function uploadQuestionImage(file: File): Promise<string> {
-  const bucket = 'questions-images';
-  // Path solicitado: questions/<timestamp>-<file.name>
-  const safeName = file.name?.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '') || 'image.bin';
-  const path = `questions/${Date.now()}-${safeName}`;
+  // Upload via server API to bypass Storage RLS using service role
+  const form = new FormData();
+  form.append('file', file);
+  form.append('bucket', 'questions-images');
+  form.append('prefix', 'questions');
 
-  const { error: uploadError } = await supabase.storage
-    .from(bucket)
-    .upload(path, file, {
-      upsert: false,
-      cacheControl: '3600',
-      contentType: file.type || undefined,
-    });
+  const res = await fetch('/api/admin/storage/upload', {
+    method: 'POST',
+    body: form,
+  });
 
-  if (uploadError) {
-    throw new Error(uploadError.message || 'Falha ao fazer upload da imagem');
+  if (!res.ok) {
+    try {
+      const err = await res.json();
+      throw new Error(err.error || 'Falha ao fazer upload da imagem');
+    } catch (e) {
+      throw new Error((e as Error)?.message || 'Falha ao fazer upload da imagem');
+    }
   }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  if (!data?.publicUrl) {
+  const json = await res.json();
+  if (!json?.url) {
     throw new Error('Não foi possível obter a URL pública da imagem');
   }
-  return data.publicUrl;
+  return json.url as string;
 }

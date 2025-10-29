@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminCRUDTable } from './AdminCRUDTable';
 import { adminCRUD } from '@/lib/supabase-admin';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Eye, FileText, HelpCircle } from 'lucide-react';
 import { uploadQuestionImage } from '@/lib/supabase';
+import { createClient as createSupabaseClient } from '@/utils/supabase/client';
+import { FiltersBar } from '@/app/questoes/components/FiltersBar';
 import { FilterOption } from './AdminFilters';
 
 interface ColumnConfig {
@@ -54,15 +56,21 @@ function QuestionDetailsModal({
 
           <div className="space-y-6">
             {/* Image preview */}
-            {Boolean(questionRecord.image_url) && (
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Imagem</Label>
-                <div className="mt-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={String(questionRecord.image_url) || ''} alt="Imagem da questão" className="max-h-64 rounded border" />
-                </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Imagem</Label>
+              <div className="mt-2">
+                {questionRecord.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={String(questionRecord.image_url)}
+                    alt="miniatura"
+                    style={{ width: 40, height: 40, objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span>—</span>
+                )}
               </div>
-            )}
+            </div>
             {/* Basic Information */}
             <div className="grid grid-cols-2 gap-6">
               <div>
@@ -251,6 +259,26 @@ function CreateQuestionForm({
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [difficulties, setDifficulties] = React.useState<string[]>(['Fácil', 'Médio', 'Difícil']);
+
+  React.useEffect(() => {
+    const supabase = createSupabaseClient();
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('questions')
+          .select('difficulty')
+          .not('difficulty', 'is', null)
+          .order('difficulty')
+          .limit(1000);
+        if (!error) {
+          const opts = Array.from(new Set((data || []).map((r: any) => r.difficulty))).filter(Boolean) as string[];
+          if (opts.length) setDifficulties(opts);
+        }
+      } catch {}
+    };
+    void load();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,9 +352,9 @@ function CreateQuestionForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Fácil">Fácil</SelectItem>
-                <SelectItem value="Médio">Médio</SelectItem>
-                <SelectItem value="Difícil">Difícil</SelectItem>
+                {difficulties.map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -525,6 +553,26 @@ function EditQuestionForm({
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [difficulties, setDifficulties] = React.useState<string[]>(['Fácil', 'Médio', 'Difícil']);
+
+  React.useEffect(() => {
+    const supabase = createSupabaseClient();
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('questions')
+          .select('difficulty')
+          .not('difficulty', 'is', null)
+          .order('difficulty')
+          .limit(1000);
+        if (!error) {
+          const opts = Array.from(new Set((data || []).map((r: any) => r.difficulty))).filter(Boolean) as string[];
+          if (opts.length) setDifficulties(opts);
+        }
+      } catch {}
+    };
+    void load();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -605,6 +653,23 @@ function EditQuestionForm({
         </div>
       </div>
 
+      {/* Difficulty */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="difficulty">Dificuldade</Label>
+          <Select value={String(formData.difficulty) || ''} onValueChange={(value) => setFormData({ ...formData, difficulty: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {difficulties.map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
@@ -623,11 +688,11 @@ const questionColumns: ColumnConfig[] = [
     key: 'image_url',
     label: 'Imagem',
     render: (value: unknown) => (
-      String(value) ? (
+      value ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={String(value)} alt="miniatura" className="h-12 w-12 object-cover rounded border" />
+        <img src={String(value)} alt="miniatura" className="w-10 h-10 object-cover rounded" />
       ) : (
-        <span className="text-gray-400 text-sm">—</span>
+        <span>—</span>
       )
     ),
   },
@@ -635,8 +700,8 @@ const questionColumns: ColumnConfig[] = [
     key: 'id',
     label: 'ID',
     render: (value: unknown) => (
-      <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-        {String(value)?.substring(0, 8)}...
+      <code className="text-xs bg-gray-100 px-2 py-1 rounded block truncate max-w-[6rem]">
+        {String(value)}
       </code>
     ),
   },
@@ -648,19 +713,11 @@ const questionColumns: ColumnConfig[] = [
       if (!stringValue) {
         return <span className="text-gray-400 text-sm italic">Sem enunciado</span>;
       }
-
-      const preview = stringValue.length > 80 ? `${stringValue.substring(0, 80)}...` : stringValue;
-
       return (
-        <div className="space-y-1">
-          <div className="text-sm leading-tight" title={stringValue}>
-            {preview}
+        <div className="space-y-1 min-w-0">
+          <div className="text-sm leading-tight line-clamp-2 break-words" title={stringValue}>
+            {stringValue}
           </div>
-          {stringValue.length > 80 && (
-            <div className="text-xs text-gray-500">
-              Clique em &ldquo;Ver Detalhes&rdquo; para ver completo
-            </div>
-          )}
         </div>
       );
     },
@@ -681,8 +738,6 @@ const questionColumns: ColumnConfig[] = [
         return <span className="text-gray-400 text-sm">Sem alternativas</span>;
       }
 
-      const correctAnswer = alternatives.find(alt => alt.letter === String(questionRecord.correct_letter));
-
       return (
         <div className="space-y-1">
           <div className="flex items-center gap-1 text-xs">
@@ -691,14 +746,6 @@ const questionColumns: ColumnConfig[] = [
             </Badge>
             <span className="text-gray-600">alternativas</span>
           </div>
-          {correctAnswer && (
-            <div className="flex items-center gap-1 text-xs">
-              <Badge variant="default" className="text-xs px-1 py-0">
-                {correctAnswer.letter}
-              </Badge>
-              <span className="text-gray-600">correta</span>
-            </div>
-          )}
           <div className="text-xs text-gray-500">
             Clique em &ldquo;Ver Detalhes&rdquo; para ver todas
           </div>
@@ -799,11 +846,60 @@ const questionFilters: FilterOption[] = [
 
 export function QuestionsManagement() {
   const crud = useMemo(() => adminCRUD.questions(), []);
-  const searchFields = useMemo(() => ['prompt', 'component', 'natural_key'], []);
+  // Busca do admin deve seguir o rótulo "Buscar no enunciado"
+  const searchFields = useMemo(() => ['prompt'], []);
   const [viewingQuestion, setViewingQuestion] = useState<Record<string, unknown> | null>(null);
+  const [components, setComponents] = useState<string[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [difficulties, setDifficulties] = useState<string[]>([]);
+  const [filters, setFilters] = useState<{ search?: string; component?: string; difficulty?: string; year?: string }>({});
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    const loadOptions = async () => {
+      try {
+        const [cRes, yRes, dRes] = await Promise.all([
+          supabase.from('v_questions_public').select('component').not('component', 'is', null).order('component').limit(1000),
+          supabase.from('v_questions_public').select('year').not('year', 'is', null).order('year').limit(1000),
+          supabase.from('v_questions_public').select('difficulty').not('difficulty', 'is', null).order('difficulty').limit(1000),
+        ])
+        const comps = Array.from(new Set((cRes.data || []).map((r: any) => r.component))).filter(Boolean)
+        const yrs = Array.from(new Set((yRes.data || []).map((r: any) => r.year))).filter((n): n is number => typeof n === 'number')
+        const diffs = Array.from(new Set((dRes.data || []).map((r: any) => r.difficulty))).filter(Boolean)
+        setComponents(comps)
+        setYears(yrs)
+        setDifficulties(diffs as string[])
+      } catch (e) {
+        console.error('Erro ao carregar filtros (admin questions):', e)
+      }
+    }
+    void loadOptions()
+  }, [])
+
+  const externalFilters = useMemo(() => {
+    const f: Record<string, unknown> = {}
+    if (filters.component) f.component = filters.component
+    if (filters.difficulty) f.difficulty = filters.difficulty
+    if (filters.year) {
+      const y = Number(filters.year)
+      f.year = Number.isNaN(y) ? filters.year : y
+    }
+    return f
+  }, [filters])
 
   return (
     <>
+      {/* Barra de filtros (mesma UX da página pública) */}
+      <div className="mb-3">
+        <FiltersBar
+          value={{ search: filters.search, component: filters.component, difficulty: filters.difficulty, year: filters.year }}
+          onChange={(next) => setFilters(next)}
+          components={components}
+          difficulties={difficulties}
+          years={years}
+        />
+      </div>
+
       <AdminCRUDTable
         tableName="questions"
         title="Gerenciamento de Questões"
@@ -827,6 +923,23 @@ export function QuestionsManagement() {
           },
         ]}
         crud={crud}
+        disableToolbar
+        externalFilters={externalFilters}
+        externalSearch={filters.search || ''}
+        createLabel="Nova Questão"
+        fixedLayout
+        columnClasses={{
+          image_url: 'w-16 md:w-20',
+          id: 'w-24',
+          prompt: 'w-auto',
+          alternatives: 'w-24',
+          correct_letter: 'w-16',
+          component: 'w-40',
+          difficulty: 'w-28',
+          year: 'w-16',
+          created_at: 'w-28',
+          __actions: 'w-28'
+        }}
         createForm={CreateQuestionForm}
         editForm={EditQuestionForm}
         searchFields={searchFields}

@@ -7,16 +7,16 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClient()
 
     // Check if user is authenticated and is admin
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    const userRole = session.user.user_metadata?.user_role
+    const userRole = user.user_metadata?.user_role
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Not authorized: admin access required' },
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Query API - User authenticated:', {
-      userId: session.user.id,
+      userId: user.id,
       role: userRole
     })
 
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     // Log the admin action
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('admin_actions').insert({
-      admin_id: session.user.id,
+      admin_id: user.id,
       action: 'database_query_execute',
       payload: {
         query_length: query.length,

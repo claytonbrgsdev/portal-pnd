@@ -5,8 +5,8 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
   const { id } = await context.params
   try {
     const supabase = await createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
@@ -20,5 +20,4 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
 
